@@ -1,12 +1,15 @@
 import { NotFoundError, VersionConflictError } from '../../lib/errors.js';
 import type { RunInTransaction, Tx } from '../../lib/prisma.js';
+import { diffFields } from './lead-diff.js';
 import type { LeadsRepository } from './leads.repository.js';
 import type {
   ChangeStatusBody,
   CreateLeadInput,
+  EditableValues,
   LeadDetail,
   LeadSummary,
   ListLeadsQuery,
+  UpdateLeadBody,
 } from './leads.schemas.js';
 import { allowedTransitions, canTransition, InvalidTransitionError } from './status-workflow.js';
 
@@ -59,6 +62,36 @@ export function createLeadsService(deps: {
           type: 'STATUS_CHANGED',
           actor,
           payload: { from: current.status, to: body.status },
+        });
+      });
+      return get(id);
+    },
+
+    /**
+     * Edits contact details, notes or assignee. The change and its LEAD_UPDATED activity,
+     * holding a field-level { from, to } diff, are written in one transaction.
+     * Values equal to the current ones are ignored; if nothing changes, nothing is written.
+     */
+    async updateFields(id: string, body: UpdateLeadBody, actor: string): Promise<LeadDetail> {
+      const { version, ...updates } = body;
+      await runInTransaction(async (tx) => {
+        const current = await leads.findEditableState(tx, id);
+        if (!current) throw new NotFoundError('Lead not found');
+        if (current.version !== version) throw new VersionConflictError(current.version);
+
+        const changes = diffFields<EditableValues>(current, updates);
+        if (Object.keys(changes).length === 0) return;
+
+        const data = Object.fromEntries(
+          Object.entries(changes).map(([field, change]) => [field, change.to]),
+        );
+        const applied = await leads.updateIfVersion(tx, id, version, data);
+        if (!applied) throw new VersionConflictError();
+        await leads.addActivity(tx, {
+          leadId: id,
+          type: 'LEAD_UPDATED',
+          actor,
+          payload: { changes },
         });
       });
       return get(id);

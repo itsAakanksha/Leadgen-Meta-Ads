@@ -319,3 +319,36 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
 
 - status: success with actor, non-ASCII actor, anonymous, no-op, 422, converted is terminal, stale 409, a concurrent race where exactly one wins with one activity, audit failure rolls back, 404, invalid bodies, invalid actor
 - actor: unit tests
+
+---
+
+## Step 11 — Editable-field PATCH with a field-level diff audit
+
+**What:**
+
+- `PATCH /leads/:id` with body `{ version, fullName?, email?, phone?, notes?, assignee? }`, in one transaction:
+  1. read the current values
+  2. check the version → 409 if it's stale
+  3. `diffFields` → return with no write if nothing changed
+  4. `updateIfVersion` with only the changed fields
+  5. append `LEAD_UPDATED { changes: { field: { from, to } } }`
+- `lead-diff.ts`: a pure generic diff.
+- The endpoint goes beyond the spec. The human asked for it so the audit trail has real `LEAD_UPDATED` events; the README will explain.
+
+**Decisions:**
+
+- **`status` in the body → 400 `STATUS_NOT_EDITABLE`,** pointing to `/status`. Every status change then goes through workflow validation and is recorded as `STATUS_CHANGED`.
+- **The body is a strict object,** so Meta-sourced fields (`leadgenId`, `fieldData`, …) can't be overwritten → 400.
+- **Validation:**
+  - email format
+  - phone pattern (digits, spaces, `()-`, optional `+`)
+  - length limits
+- **Text is trimmed, and an empty string clears a field (stored as `null`).** So `"  Ada  "` against `"Ada"` is a no-op.
+- **Only changed fields are written and recorded,** so identical values produce no activity.
+- **Email is not lowercased.** The AI first added lowercasing, then removed it: it would have treated user edits differently from Meta's data.
+- **Both PATCH endpoints share the same version counter.** A concurrent status change and field edit can't both succeed; a test covers this.
+
+**Tests:** 161 passing.
+
+- diff: unit tests
+- update: diff content, clearing fields, no-op, `STATUS_NOT_EDITABLE`, 409, concurrent edits across the two endpoints, rollback when the audit write fails, 404, invalid bodies

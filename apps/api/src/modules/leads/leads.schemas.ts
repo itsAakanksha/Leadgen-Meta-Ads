@@ -100,3 +100,43 @@ export const changeStatusBodySchema = z.strictObject({
 });
 
 export type ChangeStatusBody = z.infer<typeof changeStatusBodySchema>;
+
+/** Optional text field: trimmed; an empty string clears it (stored as null). */
+const clearableText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .transform((value) => (value === '' ? null : value))
+    .nullable()
+    .optional();
+
+/** Fields a user may edit with PATCH /leads/:id. Status has its own endpoint. */
+export const EDITABLE_FIELDS = ['fullName', 'email', 'phone', 'notes', 'assignee'] as const;
+export type EditableField = (typeof EDITABLE_FIELDS)[number];
+export type EditableValues = Record<EditableField, string | null>;
+
+export const updateLeadBodySchema = z.strictObject({
+  version: z.number().int().min(1),
+  fullName: clearableText(200),
+  email: z
+    .union([z.literal(''), z.email().max(254)])
+    .transform((value) => (value === '' ? null : value))
+    .nullable()
+    .optional(),
+  phone: z
+    .union([
+      z.literal(''),
+      z
+        .string()
+        .trim()
+        .regex(/^\+?[0-9][0-9 ()-]{5,24}$/, 'Invalid phone number'),
+    ])
+    .transform((value) => (value === '' ? null : value))
+    .nullable()
+    .optional(),
+  notes: clearableText(5000),
+  assignee: clearableText(100),
+});
+
+export type UpdateLeadBody = z.infer<typeof updateLeadBodySchema>;

@@ -3,6 +3,7 @@ import type { PrismaClient, Tx } from '../../lib/prisma.js';
 import type {
   ActivityTypeValue,
   CreateLeadInput,
+  EditableValues,
   LeadDetail,
   LeadStatusValue,
   LeadSummary,
@@ -93,6 +94,21 @@ export function createLeadsRepository(prisma: PrismaClient) {
     /** Current state needed to validate a change, read inside the write transaction. */
     findState(tx: Tx, id: string): Promise<{ status: LeadStatusValue; version: number } | null> {
       return tx.lead.findUnique({ where: { id }, select: { status: true, version: true } });
+    },
+
+    /** Current editable values and version, read inside the write transaction. */
+    findEditableState(tx: Tx, id: string): Promise<(EditableValues & { version: number }) | null> {
+      return tx.lead.findUnique({
+        where: { id },
+        select: {
+          version: true,
+          fullName: true,
+          email: true,
+          phone: true,
+          notes: true,
+          assignee: true,
+        },
+      });
     },
 
     /**
