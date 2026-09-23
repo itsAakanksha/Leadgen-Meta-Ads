@@ -473,3 +473,50 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
 - The AI thought the generated `import { cn } from "cn"` was broken. It is in fact shadcn's official `cn` package. The imports were routed through `@/lib/utils` anyway, which is harmless and matches `components.json`.
 - `pnpm format` reformatted the human's untracked `.agents/skills/*.md` files (whitespace and markdown formatting only; they can't be restored from git). `.agents/` is now in `.prettierignore` and the ESLint ignores, and the human was told.
 - A test caught an accessibility bug: the header button's accessible name was "Acting asSam Lee", because a trailing space inside a span is dropped from the name. Fixed.
+
+---
+
+## Step 14 — Lead list with filters, search, pagination and UI states
+
+**What:**
+
+- `features/leads/`:
+  - types that mirror the API
+  - `useLeads`/`useLead` query hooks (`keepPreviousData`, so paging doesn't flash skeletons)
+  - `leads-query.ts`: a pure mapping between URL params and the query
+  - `LeadFilters`: debounced search, plus shadcn Selects for status and platform, with clear
+  - `LeadsTable`: shadcn Table on desktop, a stacked list on mobile, and a skeleton of the same shape
+  - `StatusBadge`
+- Shared: `EmptyState`, `ErrorState` (with retry), `Pagination` ("21–40 of 45").
+
+**Decisions:**
+
+- **Filters, search and page live in the URL.** Views are shareable and survive reloads. Invalid values in the URL are dropped rather than sent to the API, and changing any filter resets to page 1.
+- **URL updates use functional `setParams`,** so a debounced search can't overwrite a newer filter change.
+- **States:**
+  - skeleton, plus a "Waking up the server…" hint once a retry has happened (Render free-tier cold start)
+  - error with retry
+  - two empty states: no leads yet vs. no match (with clear filters)
+  - dimmed content while the next page loads
+- **Accessibility:**
+  - the whole row is clickable through a stretched link, which stays a single labelled link for keyboard and screen-reader users
+  - `role="search"`
+  - an sr-only label on the search input
+  - `aria-label` on the Select triggers
+  - an `aria-live` result count
+  - `aria-busy` while loading
+- **Monospace only for data** (timestamps). Numbers use tabular figures.
+
+**Visual verification:**
+
+- The real API and Vite dev server were run against the local database, with sample rows inserted directly into the local DB (not committed).
+- Headless Chrome screenshots were taken at 1280px (table), 500px (mobile list) and 2× zoom (font check).
+- An apparent mobile overflow at 390px turned out to be headless Chrome's minimum window width; at 500px the layout fits.
+- One tweak came out of review: the source label on mobile moved from mono to sans.
+
+**Tests:** web 24 passing:
+
+- URL query parsing and building
+- table links, column headers and fallbacks
+- pagination range and disabled states
+- actor prompt
