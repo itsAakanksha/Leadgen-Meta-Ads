@@ -1,13 +1,28 @@
-import { NotFoundError } from '../../lib/errors.js';
-import type { Tx } from '../../lib/prisma.js';
+import { NotFoundError, VersionConflictError } from '../../lib/errors.js';
+import type { RunInTransaction, Tx } from '../../lib/prisma.js';
 import type { LeadsRepository } from './leads.repository.js';
-import type { CreateLeadInput, LeadDetail, LeadSummary, ListLeadsQuery } from './leads.schemas.js';
-import { allowedTransitions } from './status-workflow.js';
+import type {
+  ChangeStatusBody,
+  CreateLeadInput,
+  LeadDetail,
+  LeadSummary,
+  ListLeadsQuery,
+} from './leads.schemas.js';
+import { allowedTransitions, canTransition, InvalidTransitionError } from './status-workflow.js';
 
 export type LeadsService = ReturnType<typeof createLeadsService>;
 
-export function createLeadsService(deps: { leads: LeadsRepository }) {
-  const { leads } = deps;
+export function createLeadsService(deps: {
+  leads: LeadsRepository;
+  runInTransaction: RunInTransaction;
+}) {
+  const { leads, runInTransaction } = deps;
+
+  async function get(id: string): Promise<LeadDetail> {
+    const lead = await leads.findById(id);
+    if (!lead) throw new NotFoundError('Lead not found');
+    return { ...lead, allowedTransitions: allowedTransitions(lead.status) };
+  }
 
   return {
     async list(
@@ -18,10 +33,35 @@ export function createLeadsService(deps: { leads: LeadsRepository }) {
     },
 
     /** A lead with its activity timeline and the statuses it may move to next. */
-    async get(id: string): Promise<LeadDetail> {
-      const lead = await leads.findById(id);
-      if (!lead) throw new NotFoundError('Lead not found');
-      return { ...lead, allowedTransitions: allowedTransitions(lead.status) };
+    get,
+
+    /**
+     * Moves a lead through the status workflow. The status change and its STATUS_CHANGED
+     * activity are written in one transaction.
+     * - stale `version` → 409 (someone else changed the lead first)
+     * - same status → no write, no activity
+     * - transition not in the workflow → 422
+     */
+    async changeStatus(id: string, body: ChangeStatusBody, actor: string): Promise<LeadDetail> {
+      await runInTransaction(async (tx) => {
+        const current = await leads.findState(tx, id);
+        if (!current) throw new NotFoundError('Lead not found');
+        if (current.version !== body.version) throw new VersionConflictError(current.version);
+        if (current.status === body.status) return;
+        if (!canTransition(current.status, body.status)) {
+          throw new InvalidTransitionError(current.status, body.status);
+        }
+
+        const applied = await leads.updateIfVersion(tx, id, body.version, { status: body.status });
+        if (!applied) throw new VersionConflictError();
+        await leads.addActivity(tx, {
+          leadId: id,
+          type: 'STATUS_CHANGED',
+          actor,
+          payload: { from: current.status, to: body.status },
+        });
+      });
+      return get(id);
     },
 
     /**

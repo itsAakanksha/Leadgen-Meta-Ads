@@ -1,6 +1,13 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { PrismaClient, Tx } from '../../lib/prisma.js';
-import type { CreateLeadInput, LeadDetail, LeadSummary, ListLeadsQuery } from './leads.schemas.js';
+import type {
+  ActivityTypeValue,
+  CreateLeadInput,
+  LeadDetail,
+  LeadStatusValue,
+  LeadSummary,
+  ListLeadsQuery,
+} from './leads.schemas.js';
 
 export const SYSTEM_META_ACTOR = 'system:meta';
 
@@ -81,6 +88,39 @@ export function createLeadsRepository(prisma: PrismaClient) {
     /** The lead with its full audit trail, or null. */
     findById(id: string): Promise<Omit<LeadDetail, 'allowedTransitions'> | null> {
       return prisma.lead.findUnique({ where: { id }, select: leadDetailSelect });
+    },
+
+    /** Current state needed to validate a change, read inside the write transaction. */
+    findState(tx: Tx, id: string): Promise<{ status: LeadStatusValue; version: number } | null> {
+      return tx.lead.findUnique({ where: { id }, select: { status: true, version: true } });
+    },
+
+    /**
+     * Optimistic-locking update: only applies if the row still has `expectedVersion`, and
+     * bumps the version. Returns false if another writer got there first. Under concurrent
+     * updates Postgres re-checks the WHERE after the first commit, so exactly one wins.
+     */
+    async updateIfVersion(
+      tx: Tx,
+      id: string,
+      expectedVersion: number,
+      data: Prisma.LeadUpdateManyMutationInput,
+    ): Promise<boolean> {
+      const { count } = await tx.lead.updateMany({
+        where: { id, version: expectedVersion },
+        data: { ...data, version: { increment: 1 } },
+      });
+      return count === 1;
+    },
+
+    /** Appends an audit record. Always called in the same transaction as the change. */
+    async addActivity(
+      tx: Tx,
+      activity: { leadId: string; type: ActivityTypeValue; actor: string; payload: object },
+    ): Promise<void> {
+      await tx.leadActivity.create({
+        data: activity,
+      });
     },
 
     /**

@@ -286,3 +286,36 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
 - **Invalid UUID → 400 with path `id`; unknown UUID → 404.**
 
 **Tests:** 117 passing without credentials, including a table test over all 25 status pairs.
+
+---
+
+## Step 10 — Status workflow with optimistic locking and actor attribution
+
+**What:**
+
+- `PATCH /leads/:id/status` with body `{ status, version }` runs in one transaction:
+  1. read the current state
+  2. check the version → 409 `VERSION_CONFLICT`, with `currentVersion` in the details
+  3. same status → return with no write and no activity
+  4. check the workflow → 422 `INVALID_TRANSITION`, with the allowed next statuses
+  5. `updateMany WHERE id AND version` with `version + 1`
+  6. append `STATUS_CHANGED { from, to }`
+- It returns the fresh lead detail.
+- `lib/actor.ts`: `actorFrom(req)` turns `X-Actor` into `user:<name>`, or `user:anonymous` if absent.
+- `lib/errors.ts`: `VersionConflictError` and `parseOrThrow()`. `InvalidTransitionError` lives next to the workflow.
+- Repository primitives reused by step 11: `findState`, `updateIfVersion`, `addActivity`.
+- `test/support/db-faults.ts`: `withFailingActivityInserts()` adds a temporary trigger so tests can prove rollback. It's reused by the ingestion atomicity test.
+
+**Decisions:**
+
+- **The version is checked twice.**
+  - Once up front, for a clear 409 that includes the current version.
+  - Again in the `UPDATE ... WHERE version = ?`, which is the real concurrency guard. Under READ COMMITTED, the second writer's UPDATE re-evaluates its WHERE after the first commits and matches 0 rows, so exactly one writer wins without explicit locks.
+- **The version check comes before the no-op check.** A stale client gets a 409 even if its requested status happens to match.
+- **Browsers only allow ASCII header values, so `X-Actor` is URI-encoded.** The server decodes it and validates: at most 60 chars; letters, numbers, spaces and name punctuation only. `:` is not allowed, so a user can't pose as `system:meta`.
+- **The body is a `strictObject`,** so unknown keys → 400.
+
+**Tests:** 141 passing.
+
+- status: success with actor, non-ASCII actor, anonymous, no-op, 422, converted is terminal, stale 409, a concurrent race where exactly one wins with one activity, audit failure rolls back, 404, invalid bodies, invalid actor
+- actor: unit tests

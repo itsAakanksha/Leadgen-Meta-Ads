@@ -26,12 +26,13 @@ export function createServices({ config, logger, prisma }: AppDeps) {
     version: config.meta.graphApiVersion,
     accessToken: config.meta.pageAccessToken,
   });
-  const leads = createLeadsService({ leads: createLeadsRepository(prisma) });
+  const runInTransaction = createTransactionRunner(prisma);
+  const leads = createLeadsService({ leads: createLeadsRepository(prisma), runInTransaction });
   const ingestion = createIngestionService({
     webhookEvents: createWebhookEventsRepository(prisma),
     leads,
     graph,
-    runInTransaction: createTransactionRunner(prisma),
+    runInTransaction,
     logger,
   });
   return { leads, ingestion };

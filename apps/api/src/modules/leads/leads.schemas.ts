@@ -92,3 +92,11 @@ export type LeadDetail = LeadSummary & {
   allowedTransitions: readonly LeadStatusValue[];
   activities: LeadActivityDto[];
 };
+
+/** PATCH /leads/:id/status body. `version` is the version the client last saw. */
+export const changeStatusBodySchema = z.strictObject({
+  status: z.enum(LeadStatus),
+  version: z.number().int().min(1),
+});
+
+export type ChangeStatusBody = z.infer<typeof changeStatusBodySchema>;

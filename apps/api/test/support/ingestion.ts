@@ -11,14 +11,15 @@ export function buildIngestion(
   prisma: PrismaClient,
   options: { accessToken: string; graphApiVersion?: string; maxAttempts?: number },
 ) {
+  const runInTransaction = createTransactionRunner(prisma);
   return createIngestionService({
     webhookEvents: createWebhookEventsRepository(prisma),
-    leads: createLeadsService({ leads: createLeadsRepository(prisma) }),
+    leads: createLeadsService({ leads: createLeadsRepository(prisma), runInTransaction }),
     graph: createGraphClient({
       version: options.graphApiVersion ?? 'v25.0',
       accessToken: options.accessToken,
     }),
-    runInTransaction: createTransactionRunner(prisma),
+    runInTransaction,
     logger: silentLogger,
     ...(options.maxAttempts === undefined ? {} : { maxAttempts: options.maxAttempts }),
   });

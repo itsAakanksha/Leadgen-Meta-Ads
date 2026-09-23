@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { testConfig } from '../../../../test/support/config.js';
 import { createTestPrisma, resetDatabase } from '../../../../test/support/database.js';
+import { withFailingActivityInserts } from '../../../../test/support/db-faults.js';
 import { buildIngestion } from '../../../../test/support/ingestion.js';
 import { silentLogger } from '../../../../test/support/logger.js';
 import {
@@ -80,22 +81,13 @@ describe('ingestion pipeline (real Meta)', () => {
 
   it('rolls back the lead if writing its audit record fails (atomicity)', async () => {
     // Real database failure injected with a temporary trigger on the activity table.
-    await prisma.$executeRawUnsafe(`
-      CREATE FUNCTION test_fail_activity_insert() RETURNS trigger AS $$
-      BEGIN RAISE EXCEPTION 'injected failure'; END; $$ LANGUAGE plpgsql`);
-    await prisma.$executeRawUnsafe(`
-      CREATE TRIGGER test_fail_activity_insert BEFORE INSERT ON lead_activities
-      FOR EACH ROW EXECUTE FUNCTION test_fail_activity_insert()`);
-    try {
+    await withFailingActivityInserts(prisma, async () => {
       await deliver(leadgenBody([{ leadgen_id: leadgenId }]));
       await ingestion.processNextEvent();
+    });
 
-      expect(await prisma.lead.count()).toBe(0); // no lead without its audit record
-      const event = await prisma.webhookEvent.findUniqueOrThrow({ where: { leadgenId } });
-      expect(event).toMatchObject({ status: 'pending', attempts: 1 });
-    } finally {
-      await prisma.$executeRawUnsafe('DROP TRIGGER test_fail_activity_insert ON lead_activities');
-      await prisma.$executeRawUnsafe('DROP FUNCTION test_fail_activity_insert()');
-    }
+    expect(await prisma.lead.count()).toBe(0); // no lead without its audit record
+    const event = await prisma.webhookEvent.findUniqueOrThrow({ where: { leadgenId } });
+    expect(event).toMatchObject({ status: 'pending', attempts: 1 });
   }, 30_000);
 });

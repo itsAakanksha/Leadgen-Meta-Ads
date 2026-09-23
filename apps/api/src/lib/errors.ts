@@ -1,5 +1,5 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
-import type { ZodError } from 'zod';
+import type { ZodError, ZodType } from 'zod';
 
 import type { Logger } from './logger.js';
 
@@ -30,9 +30,28 @@ export class ValidationError extends AppError {
   }
 }
 
+/** Validates input against a zod schema, throwing a 400 ValidationError on failure. */
+export function parseOrThrow<T>(schema: ZodType<T>, value: unknown): T {
+  const result = schema.safeParse(value);
+  if (!result.success) throw ValidationError.fromZod(result.error);
+  return result.data;
+}
+
 export class NotFoundError extends AppError {
   constructor(message = 'Resource not found') {
     super('NOT_FOUND', message, 404);
+  }
+}
+
+/** Optimistic locking: the client edited an outdated version of the resource. */
+export class VersionConflictError extends AppError {
+  constructor(currentVersion?: number) {
+    super(
+      'VERSION_CONFLICT',
+      'This record was changed by someone else. Reload and try again.',
+      409,
+      currentVersion === undefined ? undefined : { currentVersion },
+    );
   }
 }
 

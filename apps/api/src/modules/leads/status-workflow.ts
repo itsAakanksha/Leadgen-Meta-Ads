@@ -1,4 +1,15 @@
+import { AppError } from '../../lib/errors.js';
 import type { LeadStatusValue } from './leads.schemas.js';
+
+export class InvalidTransitionError extends AppError {
+  constructor(from: LeadStatusValue, to: LeadStatusValue) {
+    super('INVALID_TRANSITION', `A lead cannot move from ${from} to ${to}`, 422, {
+      from,
+      to,
+      allowed: allowedTransitions(from),
+    });
+  }
+}
 
 /**
  * The lead status workflow:
