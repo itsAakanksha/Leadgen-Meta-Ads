@@ -1,3 +1,9 @@
+# One-command local stack:  docker compose up --build
+#   web  http://localhost:5173   (React app; /api/* is proxied to the api container)
+#   api  http://localhost:4000   (Express; runs migrations on start, then the worker)
+#   db   localhost:5433          (Postgres 17, plus a separate test database)
+# Meta credentials come from apps/api/.env (copy apps/api/.env.example).
+
 services:
   db:
     image: postgres:17-alpine
@@ -16,6 +22,36 @@ services:
       interval: 2s
       timeout: 3s
       retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      - path: apps/api/.env
+        required: false
+    environment:
+      # Inside the compose network the database is `db:5432`, not localhost:5433.
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/lead_intake
+      DIRECT_URL: postgresql://postgres:postgres@db:5432/lead_intake
+      NODE_ENV: production
+    ports:
+      - '4000:4000'
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      API_PROXY_TARGET: http://api:4000
+    ports:
+      - '5173:5173'
+    depends_on:
+      api:
+        condition: service_healthy
 
 volumes:
   db-data:

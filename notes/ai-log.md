@@ -634,3 +634,40 @@ The mutation hooks aren't unit-tested with a mocked API (the project uses no moc
   - action versions checked against the latest releases (`checkout@v7`, `setup-node@v7`, `pnpm/action-setup@v6`)
 - **`vitest run --project default`** was the AI's first attempt at filtering the Meta tests. It's wrong because there are no Vitest projects, and it was replaced with a `test:meta` script (`vitest run .meta.test`).
 - **Verified locally:** the workflow YAML parses, and `test:meta` without credentials fails with "Real Meta Graph API tests need META_PAGE_ACCESS_TOKEN, META_TEST_FORM_ID…".
+
+---
+
+## Step 18 — API Dockerfile and one-command docker-compose stack
+
+**What:**
+
+- **`apps/api/Dockerfile`**, a multi-stage build (context: repo root, the pnpm workspace):
+  1. install the api workspace and generate the Prisma client
+  2. `tsc` build
+  3. `pnpm deploy --prod` into a self-contained runtime (Debian slim)
+
+  The container runs as the non-root `node` user, has a `HEALTHCHECK` on `/health`, and its CMD runs `prisma migrate deploy` and then starts the server. Render's free plan has no pre-deploy hook, and `migrate deploy` is idempotent.
+
+- **`apps/web/Dockerfile`** (compose only; production web is a static build on Vercel): builds the app, then serves it with `vite preview`, reusing the same `/api` proxy config (`API_PROXY_TARGET=http://api:4000`).
+- **`docker compose up --build`** runs db, api and web:
+  - `apps/api/.env` supplies the Meta credentials (`required: false`; config validation reports anything missing)
+  - DB URLs are overridden for the compose network
+  - health-gated startup order
+- The Prisma CLI moved to `dependencies`, because migrations run at container start.
+
+**Bugs found by actually running the containers:**
+
+1. **The API crashed with `Cannot find module '/app/dist/generated/prisma/enums.ts'`.** Prisma 7 infers the generated client's import extension from the tsconfig present at generate time. The Docker build generates before `tsconfig.json` is copied, so it emitted `.ts` imports. Local dev never saw this because `tsx` runs TypeScript directly. Fixed by pinning `moduleFormat = "esm"` and `importFileExtension = "js"` in the generator.
+2. **The web container hit `EACCES` writing `node_modules/.vite-temp`** (root-owned files, non-root user). Fixed by chowning the app directory to `node`.
+3. **The web CMD first used `pnpm exec`.** As the non-root user, corepack would download pnpm again at startup, so it now calls `node_modules/.bin/vite` directly.
+
+**Verified:**
+
+- API container on its own: migrations "No pending migrations", `/health` OK, reports `healthy`, user `node`.
+- Full compose stack: all three containers healthy.
+  - `GET /` → 200
+  - deep link `/leads/abc` → 200 (SPA fallback)
+  - `/api/health` and `/api/leads` answered through the web container's proxy
+- The local run used a throwaway compose override (in the AI's scratch dir, not committed) for a placeholder Meta token, because the human's `.env` doesn't have one yet.
+
+**Note:** the API image is ~770 MB. The Prisma CLI and its engines are needed at runtime for migrations. Running migrations as a separate job instead is listed as future work.
