@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum WebhookEventStatus {
+  pending
+  done
+  failed
+
+  @@map("webhook_event_status")
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CONVERTED
+  LOST
+
+  @@map("lead_status")
+}
+
+enum ActivityType {
+  LEAD_CREATED
+  LEAD_UPDATED
+  STATUS_CHANGED
+
+  @@map("activity_type")
+}
+
+/// Inbox pattern: one row per Meta leadgen event. Holds Meta IDs only, never PII.
+model WebhookEvent {
+  id            String             @id @default(uuid()) @db.Uuid
+  /// Dedupe key. Meta retries deliveries for up to 36h, so duplicates are expected.
+  leadgenId     String             @unique @map("leadgen_id")
+  /// The `change.value` object from the webhook (page_id, form_id, ad_id, created_time...).
+  payload       Json
+  status        WebhookEventStatus @default(pending)
+  attempts      Int                @default(0)
+  nextAttemptAt DateTime           @default(now()) @map("next_attempt_at") @db.Timestamptz(3)
+  /// Sanitised Graph error (code/type/fbtrace_id only).
+  lastError     String?            @map("last_error")
+  receivedAt    DateTime           @default(now()) @map("received_at") @db.Timestamptz(3)
+  processedAt   DateTime?          @map("processed_at") @db.Timestamptz(3)
+
+  @@index([status, nextAttemptAt])
+  @@map("webhook_events")
+}
+
+model Lead {
+  id                        String         @id @default(uuid()) @db.Uuid
+  leadgenId                 String         @unique @map("leadgen_id")
+  pageId                    String?        @map("page_id")
+  formId                    String?        @map("form_id")
+  fullName                  String?        @map("full_name")
+  email                     String?
+  phone                     String?
+  /// Meta `field_data` as returned: [{ name, values[] }].
+  fieldData                 Json           @map("field_data")
+  /// Meta `custom_disclaimer_responses`: [{ checkbox_key, is_checked }].
+  customDisclaimerResponses Json           @default("[]") @map("custom_disclaimer_responses")
+  /// 'fb' | 'ig'
+  platform                  String?
+  isOrganic                 Boolean?       @map("is_organic")
+  adId                      String?        @map("ad_id")
+  adName                    String?        @map("ad_name")
+  adsetId                   String?        @map("adset_id")
+  adsetName                 String?        @map("adset_name")
+  campaignId                String?        @map("campaign_id")
+  campaignName              String?        @map("campaign_name")
+  /// Full Graph response. Meta deletes leads after 90 days, so keep everything on first fetch.
+  graphResponse             Json           @map("graph_response")
+  notes                     String?
+  assignee                  String?
+  status                    LeadStatus     @default(NEW)
+  /// Optimistic-locking counter; incremented on every change.
+  version                   Int            @default(1)
+  /// When the person submitted the form (Meta `created_time`).
+  metaCreatedAt             DateTime?      @map("meta_created_at") @db.Timestamptz(3)
+  createdAt                 DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                 DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  activities                LeadActivity[]
+
+  @@index([createdAt(sort: Desc)])
+  @@index([status])
+  @@map("leads")
+}
+
+/// Append-only audit log. A database trigger rejects UPDATE and DELETE.
+model LeadActivity {
+  id        String       @id @default(uuid()) @db.Uuid
+  leadId    String       @map("lead_id") @db.Uuid
+  lead      Lead         @relation(fields: [leadId], references: [id])
+  type      ActivityType
+  /// 'system:meta' | 'user:<name>' | 'user:anonymous'
+  actor     String
+  /// STATUS_CHANGED { from, to } | LEAD_UPDATED { changes: { field: { from, to } } } | LEAD_CREATED {}
+  payload   Json
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([leadId, createdAt])
+  @@map("lead_activities")
+}

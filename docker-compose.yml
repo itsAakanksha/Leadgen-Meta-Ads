@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lead_intake
+    ports:
+      - '5433:5432' # 5433 on host avoids clashing with a locally installed Postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      # Creates the separate database used by integration tests.
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  db-data:

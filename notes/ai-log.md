@@ -61,3 +61,32 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
 - **Prisma pinned to the stable 7.10 line,** because npm's `latest` tag points at an 8.0 release candidate.
 - **ESM throughout, with `NodeNext` module resolution.**
 - **`no-console` is an ESLint error,** so all logging must go through pino, which applies redaction.
+
+---
+
+## Step 2 — Prisma schema, migrations, local Postgres
+
+**What:**
+
+- Prisma schema for `WebhookEvent`, `Lead` and `LeadActivity`, with snake_case tables and columns via `@map`.
+- Generated `init` migration.
+- A hand-written second migration containing:
+  - an append-only trigger on `lead_activities` that rejects UPDATE/DELETE
+  - RLS enabled on all tables, with no policies
+- docker-compose Postgres 17, plus a separate `lead_intake_test` database for integration tests.
+
+**Decisions:**
+
+- **All timestamps are `timestamptz`.** Prisma defaults to `timestamp` without a time zone; event times must be unambiguous UTC.
+- **Prisma 7 config:** the connection URL lives in `prisma.config.ts`, not in the schema. It uses Node's built-in `process.loadEnvFile()` instead of adding `dotenv`. Migrations use `DIRECT_URL`, because Supabase's pooler is unsuitable for migrations.
+- **pnpm install scripts:** `onlyBuiltDependencies` allow-lists only the two Prisma packages that need them.
+- **Compose Postgres maps to host port 5433.** The developer machine already runs a native Postgres on 5432.
+- **Verified by hand in psql:**
+  - UPDATE and DELETE on `lead_activities` both raise.
+  - RLS is on for all three tables.
+  - `TRUNCATE` still works for test cleanup.
+
+**Notes:**
+
+- Prisma refuses `migrate reset` when an AI agent invokes it. The AI didn't bypass that guard; it recreated its own throwaway compose volume instead.
+- The AI accidentally copied a temp file outside the repo, then noticed and moved it to its scratch directory.

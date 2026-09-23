@@ -4,10 +4,21 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "postinstall": "prisma generate"
   },
   "devDependencies": {
     "@types/node": "^22.19.0",
+    "@types/pg": "^8.23.1",
+    "prisma": "7.10.0",
     "vitest": "^5.0.1"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "pg": "^8.23.0"
   }
 }
