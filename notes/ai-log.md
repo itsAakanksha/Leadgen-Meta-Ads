@@ -613,3 +613,24 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
 - actor gate: asks then continues, doesn't re-ask, cancel aborts
 
 The mutation hooks aren't unit-tested with a mocked API (the project uses no mocks). Their server behaviour is covered by the API integration tests, and they were exercised end to end as described above.
+
+---
+
+## Step 17 — CI on GitHub Actions
+
+**What:** `.github/workflows/ci.yml` has three jobs:
+
+1. **checks:** format check, lint, typecheck, and a web production build.
+2. **test:** a Postgres 17 service container, then `api test:no-meta` and the web tests. These include the real-Graph failure paths that use an invalid token, which need internet access but no secrets.
+3. **test-meta:** the real Graph API tests (`pnpm --filter @lead-intake/api test:meta`), using the repository secrets `META_PAGE_ACCESS_TOKEN` and `META_TEST_FORM_ID`.
+
+**Decisions:**
+
+- **`test-meta` fails loudly if the secrets are missing; it never skips.** This matches the human's "real Meta only" decision. Until the secrets are added to the GitHub repo, that job will be red. That's deliberate and is documented in the README.
+- **`concurrency: meta-graph-api` on `test-meta`.** Runs share one Meta test form, which allows one test lead at a time, so overlapping runs would delete each other's leads.
+- **Other workflow settings:**
+  - read-only `permissions`
+  - cancel superseded runs
+  - action versions checked against the latest releases (`checkout@v7`, `setup-node@v7`, `pnpm/action-setup@v6`)
+- **`vitest run --project default`** was the AI's first attempt at filtering the Meta tests. It's wrong because there are no Vitest projects, and it was replaced with a `test:meta` script (`vitest run .meta.test`).
+- **Verified locally:** the workflow YAML parses, and `test:meta` without credentials fails with "Real Meta Graph API tests need META_PAGE_ACCESS_TOKEN, META_TEST_FORM_ID…".
