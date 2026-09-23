@@ -262,3 +262,27 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
 **Bug caught by a test:** Prisma's `contains` doesn't escape LIKE wildcards, so searching `%` matched every lead. Fixed with `escapeLike()`, which escapes `\ % _` (Postgres' default LIKE escape is backslash). Tests cover `%` and `_`.
 
 **Tests:** 84 passing without credentials.
+
+---
+
+## Step 9 — Lead detail with activity timeline and allowed transitions
+
+**What:**
+
+- `GET /leads/:id` returns the lead with:
+  - `fieldData` (all answers)
+  - consents
+  - attribution
+  - `notes`, `assignee`, `version`
+  - `allowedTransitions`
+  - chronological `activities`
+- `status-workflow.ts` is a pure transition table: `allowedTransitions()` and `canTransition()`.
+
+**Decisions:**
+
+- **The status workflow moved into this step, earlier than planned,** because the detail response needs `allowedTransitions`. The server stays the single source of truth for which statuses a lead can move to; the UI only renders what it's given.
+- **Activities are ordered `createdAt ASC, id ASC`,** so the timeline reads as history.
+- **The raw `graphResponse` is not exposed by the API.** It is kept in the database for 90-day safety.
+- **Invalid UUID → 400 with path `id`; unknown UUID → 404.**
+
+**Tests:** 117 passing without credentials, including a table test over all 25 status pairs.

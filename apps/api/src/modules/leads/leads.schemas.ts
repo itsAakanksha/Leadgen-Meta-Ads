@@ -60,3 +60,35 @@ export type LeadSummary = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+/** Route parameter for /leads/:id. */
+export const leadIdParamSchema = z.object({ id: z.uuid() });
+
+export type ActivityTypeValue = 'LEAD_CREATED' | 'LEAD_UPDATED' | 'STATUS_CHANGED';
+
+/** One audit-trail entry. `payload` depends on `type` (see LeadActivity in schema.prisma). */
+export type LeadActivityDto = {
+  id: string;
+  type: ActivityTypeValue;
+  actor: string;
+  payload: unknown;
+  createdAt: Date;
+};
+
+/** Everything the detail view needs. The raw Graph response stays in the database. */
+export type LeadDetail = LeadSummary & {
+  leadgenId: string;
+  pageId: string | null;
+  fieldData: unknown;
+  customDisclaimerResponses: unknown;
+  adId: string | null;
+  adName: string | null;
+  adsetId: string | null;
+  adsetName: string | null;
+  campaignId: string | null;
+  notes: string | null;
+  assignee: string | null;
+  version: number;
+  allowedTransitions: readonly LeadStatusValue[];
+  activities: LeadActivityDto[];
+};

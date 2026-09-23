@@ -1,6 +1,6 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { PrismaClient, Tx } from '../../lib/prisma.js';
-import type { CreateLeadInput, LeadSummary, ListLeadsQuery } from './leads.schemas.js';
+import type { CreateLeadInput, LeadDetail, LeadSummary, ListLeadsQuery } from './leads.schemas.js';
 
 export const SYSTEM_META_ACTOR = 'system:meta';
 
@@ -17,6 +17,27 @@ const leadSummarySelect = {
   metaCreatedAt: true,
   createdAt: true,
   updatedAt: true,
+} satisfies Prisma.LeadSelect;
+
+const leadDetailSelect = {
+  ...leadSummarySelect,
+  leadgenId: true,
+  pageId: true,
+  fieldData: true,
+  customDisclaimerResponses: true,
+  adId: true,
+  adName: true,
+  adsetId: true,
+  adsetName: true,
+  campaignId: true,
+  notes: true,
+  assignee: true,
+  version: true,
+  activities: {
+    select: { id: true, type: true, actor: true, payload: true, createdAt: true },
+    // Chronological: the timeline reads as the lead's history.
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+  },
 } satisfies Prisma.LeadSelect;
 
 /** Prisma `contains` builds a LIKE pattern without escaping, so `%` or `_` would match anything. */
@@ -55,6 +76,11 @@ export function createLeadsRepository(prisma: PrismaClient) {
         prisma.lead.count({ where }),
       ]);
       return { leads, total };
+    },
+
+    /** The lead with its full audit trail, or null. */
+    findById(id: string): Promise<Omit<LeadDetail, 'allowedTransitions'> | null> {
+      return prisma.lead.findUnique({ where: { id }, select: leadDetailSelect });
     },
 
     /**
