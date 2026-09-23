@@ -9,6 +9,7 @@ import { createIngestionService } from './modules/ingestion/ingestion.service.js
 import { createWebhookEventsRepository } from './modules/ingestion/webhook-events.repository.js';
 import { createWebhookRouter } from './modules/ingestion/webhook.routes.js';
 import { createLeadsRepository } from './modules/leads/leads.repository.js';
+import { createLeadsRouter } from './modules/leads/leads.routes.js';
 import { createLeadsService } from './modules/leads/leads.service.js';
 
 export type AppDeps = {
@@ -25,7 +26,7 @@ export function createServices({ config, logger, prisma }: AppDeps) {
     version: config.meta.graphApiVersion,
     accessToken: config.meta.pageAccessToken,
   });
-  const leads = createLeadsService({ leads: createLeadsRepository() });
+  const leads = createLeadsService({ leads: createLeadsRepository(prisma) });
   const ingestion = createIngestionService({
     webhookEvents: createWebhookEventsRepository(prisma),
     leads,
@@ -59,6 +60,8 @@ export function createApp(deps: AppDeps, services: Services = createServices(dep
       ingestion: services.ingestion,
     }),
   );
+
+  app.use(express.json({ limit: '16kb' }), createLeadsRouter({ leads: services.leads }));
 
   app.use(notFoundHandler);
   app.use(createErrorHandler(logger));

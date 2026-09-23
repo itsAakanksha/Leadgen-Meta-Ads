@@ -1,3 +1,10 @@
+import { z } from 'zod';
+
+import { LeadStatus } from '../../generated/prisma/enums.js';
+
+export { LeadStatus };
+export type LeadStatusValue = (typeof LeadStatus)[keyof typeof LeadStatus];
+
 /** One answer from a Meta lead form: `field_data[]` item. */
 export type FieldDataItem = { name: string; values: string[] };
 
@@ -25,4 +32,31 @@ export type CreateLeadInput = {
   /** Full Graph response, kept because Meta deletes leads after 90 days. */
   graphResponse: Record<string, unknown>;
   metaCreatedAt: Date | null;
+};
+
+/** GET /leads query string. */
+export const listLeadsQuerySchema = z.object({
+  status: z.enum(LeadStatus).optional(),
+  platform: z.enum(['fb', 'ig']).optional(),
+  q: z.string().trim().min(1).max(100).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export type ListLeadsQuery = z.infer<typeof listLeadsQuerySchema>;
+
+/** A row in the lead list. */
+export type LeadSummary = {
+  id: string;
+  fullName: string | null;
+  email: string | null;
+  phone: string | null;
+  status: LeadStatusValue;
+  platform: string | null;
+  isOrganic: boolean | null;
+  formId: string | null;
+  campaignName: string | null;
+  metaCreatedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
 };

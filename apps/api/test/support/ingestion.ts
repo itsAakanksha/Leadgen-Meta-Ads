@@ -13,7 +13,7 @@ export function buildIngestion(
 ) {
   return createIngestionService({
     webhookEvents: createWebhookEventsRepository(prisma),
-    leads: createLeadsService({ leads: createLeadsRepository() }),
+    leads: createLeadsService({ leads: createLeadsRepository(prisma) }),
     graph: createGraphClient({
       version: options.graphApiVersion ?? 'v25.0',
       accessToken: options.accessToken,

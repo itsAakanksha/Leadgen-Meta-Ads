@@ -236,3 +236,29 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
   - full pipeline with a real test lead
   - reprocessing never duplicates the lead or activity
   - atomicity: a temporary DB trigger makes the activity insert fail, and the lead must roll back too
+
+---
+
+## Step 8 — List leads with filters, search and pagination
+
+**What:**
+
+- `GET /leads?status=&platform=&q=&page=&limit=` returns `{ data, page, limit, total }`.
+- Files touched:
+  - `leads.routes.ts`: HTTP only
+  - `leads.service.list`
+  - `leads.repository.list`
+  - the zod query schema and `LeadSummary` type in `leads.schemas.ts`
+- `test/support/leads.ts`: `insertLead` fixture, used for testing the lead APIs. These are DB rows, not a mocked Meta.
+
+**Decisions:**
+
+- **Sort by `createdAt DESC, id DESC`.** The `id` tie-breaker means pages never repeat or skip leads with identical timestamps. A test covers this.
+- **The page and the total are read in one `$transaction([...])`** so they agree.
+- **Search is case-insensitive on name and email, and a substring match on phone.**
+- **The list returns summary fields only.** No `fieldData` or `graphResponse`, which keeps the payload small and PII-light.
+- **Invalid `status`, `platform`, `page` or `limit` → 400** with the field path. `limit` is capped at 100.
+
+**Bug caught by a test:** Prisma's `contains` doesn't escape LIKE wildcards, so searching `%` matched every lead. Fixed with `escapeLike()`, which escapes `\ % _` (Postgres' default LIKE escape is backslash). Tests cover `%` and `_`.
+
+**Tests:** 84 passing without credentials.
