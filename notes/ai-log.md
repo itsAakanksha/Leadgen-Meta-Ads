@@ -193,3 +193,46 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
 
 - The real-Graph tests (fetch a real test lead, error 100, error 190) are written but **not yet executed**. The human is still finishing the Meta app setup.
 - 60 offline tests pass.
+
+---
+
+## Step 7 — Worker: webhook events → leads, with atomic audit and retries
+
+**What:**
+
+- `ingestion.service.processNextEvent()` runs in one transaction:
+  1. Claim the oldest due event (`FOR UPDATE SKIP LOCKED`, via `$queryRaw`).
+  2. Fetch the lead from Graph.
+  3. `leads.createFromMeta`: the lead and its `LEAD_CREATED` activity in a single nested create.
+  4. Mark the event done.
+- On error the transaction rolls back and a separate update records the failure:
+  - increment `attempts`
+  - store a sanitised `lastError`
+  - apply exponential backoff (30s, doubling, capped at 1h)
+  - after 8 attempts, mark the event `failed`
+- `webhook-events.worker.ts`: an in-process loop that drains every due event, then sleeps `WORKER_POLL_MS`. It stops gracefully on shutdown.
+- Leads module:
+  - `leads.repository.createFromMeta`, a no-op if the lead already exists
+  - `leads.service.createFromMeta(input, tx)`, the only way ingestion writes leads (it never touches the leads repository)
+- Composition root: `createServices()` wires everything once. The server shares those services with its worker, and tests use them too.
+- `lib/prisma.ts`: `RunInTransaction`, so services own transaction boundaries without importing Prisma.
+
+**Decisions:**
+
+- **The Graph fetch happens inside the transaction.** A crash at any point leaves the event pending and unlocked, so there's no "processing" state and no stale-lock recovery. This was agreed in planning.
+- **`describeError` reduces unknown errors to `name + code`.** Prisma error messages can include query arguments, which could be PII. Graph errors are already sanitised.
+- **Failure bookkeeping runs outside the rolled-back transaction,** so a failed attempt is still counted.
+- **TypeScript narrowing workaround:** `let claimed = null as ClaimedEvent | null`. TS doesn't see an assignment made inside a callback.
+
+**Tests:**
+
+- 69 passing without credentials. These include real-Meta failure paths using a deliberately invalid token, so Meta returns error 190:
+  - retry and backoff, with no token in `lastError`
+  - not retried early
+  - `failed` after the maximum attempts
+  - two concurrent workers never claim the same event
+  - the worker loop
+- **Written but not yet run (need credentials), in `ingestion.meta.test.ts`:**
+  - full pipeline with a real test lead
+  - reprocessing never duplicates the lead or activity
+  - atomicity: a temporary DB trigger makes the activity insert fail, and the lead must roll back too

@@ -16,6 +16,7 @@ describe('loadConfig', () => {
       port: 4000,
       logLevel: 'info',
       databaseUrl: validEnv.DATABASE_URL,
+      workerPollMs: 2000,
       meta: {
         verifyToken: validEnv.META_VERIFY_TOKEN,
         appSecret: validEnv.META_APP_SECRET,

@@ -5,6 +5,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   DATABASE_URL: z.url(),
+  // How often the worker checks for due webhook events.
+  WORKER_POLL_MS: z.coerce.number().int().min(100).default(2000),
   // Must match the "Verify Token" entered in the Meta App Dashboard (Webhooks product).
   META_VERIFY_TOKEN: z.string().min(16, 'must be at least 16 characters'),
   // Meta App Secret (App Dashboard > Settings > Basic). Used to verify X-Hub-Signature-256.
@@ -23,6 +25,7 @@ export type Config = {
   port: number;
   logLevel: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
   databaseUrl: string;
+  workerPollMs: number;
   meta: {
     verifyToken: string;
     appSecret: string;
@@ -47,6 +50,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     port: parsed.PORT,
     logLevel: parsed.LOG_LEVEL,
     databaseUrl: parsed.DATABASE_URL,
+    workerPollMs: parsed.WORKER_POLL_MS,
     meta: {
       verifyToken: parsed.META_VERIFY_TOKEN,
       appSecret: parsed.META_APP_SECRET,

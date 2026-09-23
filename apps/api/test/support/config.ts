@@ -8,6 +8,7 @@ export function testConfig(): Config {
     port: 0,
     logLevel: 'fatal',
     databaseUrl: requireTestDatabaseUrl(),
+    workerPollMs: 100,
     meta: {
       verifyToken: 'test-verify-token-0123456789',
       appSecret: 'test-app-secret',
