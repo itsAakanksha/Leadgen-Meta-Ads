@@ -671,3 +671,19 @@ The mutation hooks aren't unit-tested with a mocked API (the project uses no moc
 - The local run used a throwaway compose override (in the AI's scratch dir, not committed) for a placeholder Meta token, because the human's `.env` doesn't have one yet.
 
 **Note:** the API image is ~770 MB. The Prisma CLI and its engines are needed at runtime for migrations. Running migrations as a separate job instead is listed as future work.
+
+---
+
+## Step 19 — Deployment config and README
+
+**What:**
+
+- `render.yaml`: a Render Blueprint for the API (Docker, free plan, `/health`). Secrets are `sync: false`, so they're entered in Render and never committed.
+- `apps/web/vercel.json`: the SPA build, plus a rewrite of `/api/*` to the Render service and an `index.html` fallback.
+- `README.md`: lead flow (mermaid sequence diagram), architecture and trade-offs, API, data model and audit guarantees, local run, Meta setup, testing, deployment, design decisions, scaling table, future work, project structure.
+
+**Decisions:**
+
+- **Supabase is reached through the Session pooler for both URLs.** Render has no IPv6 egress, Supabase's direct connection is IPv6-only on the free plan, and the transaction pooler doesn't suit migrations.
+- **The README doesn't hide the gaps:** no auth, the free-tier cold start, the image size, humanised question keys, and the real-Meta CI job staying red until secrets are added.
+- **The live URLs are left as placeholders.** Deploying needs the human's Render, Vercel and Supabase accounts, which the AI can't access.
