@@ -10,6 +10,7 @@ export function testConfig(): Config {
     databaseUrl: requireTestDatabaseUrl(),
     meta: {
       verifyToken: 'test-verify-token-0123456789',
+      appSecret: 'test-app-secret',
     },
   };
 }

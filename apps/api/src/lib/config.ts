@@ -7,6 +7,8 @@ const envSchema = z.object({
   DATABASE_URL: z.url(),
   // Must match the "Verify Token" entered in the Meta App Dashboard (Webhooks product).
   META_VERIFY_TOKEN: z.string().min(16, 'must be at least 16 characters'),
+  // Meta App Secret (App Dashboard > Settings > Basic). Used to verify X-Hub-Signature-256.
+  META_APP_SECRET: z.string().min(1),
 });
 
 export type Config = {
@@ -16,6 +18,7 @@ export type Config = {
   databaseUrl: string;
   meta: {
     verifyToken: string;
+    appSecret: string;
   };
 };
 
@@ -37,6 +40,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     databaseUrl: parsed.DATABASE_URL,
     meta: {
       verifyToken: parsed.META_VERIFY_TOKEN,
+      appSecret: parsed.META_APP_SECRET,
     },
   };
 }

@@ -137,3 +137,28 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
 - **The composition root now takes `config`.** Tests build the app with `testConfig()`, which contains fixture values only.
 
 **Tests:** 22 passing. The handshake tests cover the correct token, a wrong token, a prefix-of-token, the wrong mode, missing parameters, and a script-injection challenge.
+
+---
+
+## Step 5 — Signature verification and idempotent event storage
+
+**What:**
+
+- `POST /webhook/meta-lead` reads the raw body, verifies `X-Hub-Signature-256` (returning 401 on failure), parses it, stores leadgen events with `createMany({ skipDuplicates })`, and returns `200 EVENT_RECEIVED`. Nothing calls the Graph API inline.
+- `webhook-signature.ts`, `webhook-payload.ts`, `webhook-events.repository.ts`, `ingestion.service.ts`.
+- `META_APP_SECRET` added to config.
+
+**Decisions:**
+
+- **The signature is HMAC over the exact received bytes,** read with `express.raw({ type: () => true })`, so the content type doesn't matter. The header must match `^sha256=[0-9a-f]{64}$` before comparing, so `timingSafeEqual` always gets 32 bytes and can't throw. The legacy `sha1=` header is rejected.
+- **IDs are parsed with a reviver that uses `context.source` (Node 22)** to keep `id`/`*_id` numbers as exact strings. Meta's own docs example uses numeric IDs. A test covers a value above 2^53.
+- **Only `object: "page"` + `field: "leadgen"` is handled.** Other fields are acknowledged and ignored. Unknown keys in `value` are kept, so Meta adding fields doesn't break us.
+- **Duplicates still get 200,** so Meta stops retrying. Dedupe relies on the unique index (`ON CONFLICT DO NOTHING`), which also handles duplicates inside one batch and concurrent deliveries.
+- **A signed but malformed body → 400.**
+- **Added `ingestion.service.ts`, which wasn't in the plan's file list,** so routes don't call the repository directly. This keeps the routes → service → repository rule. The worker will call the same service.
+
+**Tests:** 51 passing.
+
+- Signature: valid, uppercase hex, tampered, wrong secret, missing, no prefix, `sha1`, truncated/non-hex, re-serialised unicode.
+- Payload: Meta's docs example with numeric IDs, batches, other fields ignored, non-page object, unknown keys kept, invalid shapes.
+- Integration: stored, 401, redelivery dedupe, batch duplicates, 5 concurrent identical deliveries → 1 row, ID above 2^53, 400.

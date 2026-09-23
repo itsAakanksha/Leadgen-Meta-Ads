@@ -1,16 +1,28 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 
 import { safeEqual } from '../../lib/crypto.js';
 import { AppError } from '../../lib/errors.js';
+import type { IngestionService } from './ingestion.service.js';
+import { parseWebhookBody } from './webhook-payload.js';
+import { isValidSignature } from './webhook-signature.js';
 
 export type WebhookRouterDeps = {
   verifyToken: string;
+  appSecret: string;
+  ingestion: IngestionService;
 };
 
 // Meta sends an integer; accept a conservative token shape so we never reflect arbitrary text.
 const CHALLENGE_PATTERN = /^[A-Za-z0-9_-]{1,256}$/;
 
-export function createWebhookRouter({ verifyToken }: WebhookRouterDeps): Router {
+// Meta batches up to 1000 changes per delivery.
+const MAX_BODY_SIZE = '5mb';
+
+export function createWebhookRouter({
+  verifyToken,
+  appSecret,
+  ingestion,
+}: WebhookRouterDeps): Router {
   const router = Router();
 
   /**
@@ -30,6 +42,25 @@ export function createWebhookRouter({ verifyToken }: WebhookRouterDeps): Router 
     }
     res.type('text/plain').send(challenge);
   });
+
+  /**
+   * Event delivery. The body is read as raw bytes (any content type) because the signature
+   * is computed over the exact bytes Meta sent.
+   */
+  router.post(
+    '/webhook/meta-lead',
+    express.raw({ type: () => true, limit: MAX_BODY_SIZE }),
+    async (req, res) => {
+      const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+      if (!isValidSignature(rawBody, req.get('X-Hub-Signature-256'), appSecret)) {
+        throw new AppError('INVALID_SIGNATURE', 'Invalid X-Hub-Signature-256', 401);
+      }
+
+      const events = parseWebhookBody(rawBody);
+      await ingestion.receiveEvents(events);
+      res.type('text/plain').send('EVENT_RECEIVED');
+    },
+  );
 
   return router;
 }

@@ -4,6 +4,8 @@ import type { Config } from './lib/config.js';
 import { createErrorHandler, notFoundHandler } from './lib/errors.js';
 import { createHttpLogger, type Logger } from './lib/logger.js';
 import type { PrismaClient } from './lib/prisma.js';
+import { createIngestionService } from './modules/ingestion/ingestion.service.js';
+import { createWebhookEventsRepository } from './modules/ingestion/webhook-events.repository.js';
 import { createWebhookRouter } from './modules/ingestion/webhook.routes.js';
 
 export type AppDeps = {
@@ -28,7 +30,18 @@ export function createApp({ config, logger, prisma }: AppDeps): Express {
     }
   });
 
-  app.use(createWebhookRouter({ verifyToken: config.meta.verifyToken }));
+  const ingestion = createIngestionService({
+    webhookEvents: createWebhookEventsRepository(prisma),
+    logger,
+  });
+
+  app.use(
+    createWebhookRouter({
+      verifyToken: config.meta.verifyToken,
+      appSecret: config.meta.appSecret,
+      ingestion,
+    }),
+  );
 
   app.use(notFoundHandler);
   app.use(createErrorHandler(logger));
