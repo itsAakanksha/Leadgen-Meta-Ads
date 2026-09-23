@@ -12,7 +12,9 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "lead:create": "tsx --env-file-if-exists=.env scripts/create-test-lead.ts",
+    "webhook:replay": "tsx --env-file-if-exists=.env scripts/replay-webhook.ts"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

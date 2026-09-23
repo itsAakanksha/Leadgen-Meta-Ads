@@ -352,3 +352,24 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
 
 - diff: unit tests
 - update: diff content, clearing fields, no-op, `STATUS_NOT_EDITABLE`, 409, concurrent edits across the two endpoints, rollback when the audit write fails, 404, invalid bodies
+
+---
+
+## Step 12 — Real test-lead creator and signed webhook replay
+
+**What:**
+
+- `scripts/meta-dev-tools.ts` holds the shared dev tooling: `sign()`, `leadgenBody()`, and `recreateTestLead()` (delete any existing test lead, then `POST /{form_id}/test_leads`). The tests reuse it rather than keep their own copies.
+- `pnpm lead:create [--form] [--name] [--email] [--phone]` creates a real lead on the demo form. Meta then delivers the real signed webhook.
+- `pnpm webhook:replay --leadgen-id <id> [--times N] [--batch] [--bad-signature] [--url]` sends Meta-shaped, correctly signed deliveries. It exists to demonstrate duplicate and batch handling, which Meta's tools can't trigger on demand.
+
+**Decisions:**
+
+- **The scripts use the same Graph client and signing code as the app and tests.** There's no separate "mock" path.
+- **`no-console` is off for `apps/*/scripts/**` only.** The app itself must log through pino.
+
+**Verified by running the real API locally:**
+
+- A 3-copy batch, then 2 more deliveries of the same ID → exactly 1 stored event. Logs: `received 3 / stored 1`, then `received 1 / stored 0` twice.
+- `--bad-signature` → 401.
+- The server log was grepped for the app secret, the token and any `sha256=` signature: 0 matches.

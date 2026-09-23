@@ -24,6 +24,11 @@ export default tseslint.config(
     },
   },
   {
+    // CLI scripts talk to the terminal; the app itself must log through pino.
+    files: ['apps/*/scripts/**'],
+    rules: { 'no-console': 'off' },
+  },
+  {
     // supertest's res.body is `any`; asserting on it is the point of these tests.
     files: ['**/*.test.ts', '**/*.test.tsx'],
     rules: {

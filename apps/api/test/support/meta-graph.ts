@@ -1,3 +1,4 @@
+import { recreateTestLead as recreateMetaTestLead } from '../../scripts/meta-dev-tools.js';
 import { createGraphClient, type GraphClient } from '../../src/lib/graph-client.js';
 
 export type MetaTestEnv = {
@@ -40,20 +41,7 @@ export const TEST_LEAD_FIELD_DATA = [
   { name: 'phone_number', values: ['+15555550100'] },
 ];
 
-/**
- * Creates a fresh real lead on the test form via POST /{form_id}/test_leads.
- * Meta allows one test lead per form, so any existing one is deleted first.
- * Returns the new leadgen ID.
- */
-export async function recreateTestLead(graph: GraphClient, formId: string): Promise<string> {
-  const existing = (await graph.get(`${formId}/test_leads`, { fields: 'id' })) as {
-    data?: { id: string }[];
-  };
-  for (const lead of existing.data ?? []) {
-    await graph.delete(lead.id);
-  }
-  const created = (await graph.post(`${formId}/test_leads`, {
-    field_data: JSON.stringify(TEST_LEAD_FIELD_DATA),
-  })) as { id: string };
-  return created.id;
+/** Creates a fresh real lead on the test form (Meta test_leads API). Returns its leadgen ID. */
+export function recreateTestLead(graph: GraphClient, formId: string): Promise<string> {
+  return recreateMetaTestLead(graph, formId, TEST_LEAD_FIELD_DATA);
 }
