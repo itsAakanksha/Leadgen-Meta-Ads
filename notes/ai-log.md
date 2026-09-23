@@ -687,3 +687,19 @@ The mutation hooks aren't unit-tested with a mocked API (the project uses no moc
 - **Supabase is reached through the Session pooler for both URLs.** Render has no IPv6 egress, Supabase's direct connection is IPv6-only on the free plan, and the transaction pooler doesn't suit migrations.
 - **The README doesn't hide the gaps:** no auth, the free-tier cold start, the image size, humanised question keys, and the real-Meta CI job staying red until secrets are added.
 - **The live URLs are left as placeholders.** Deploying needs the human's Render, Vercel and Supabase accounts, which the AI can't access.
+
+---
+
+## Step 20 — AGENT.md
+
+**What:** AGENT.md, drafted from this log. It covers:
+
+- tools
+- the process
+- key prompts
+- a table of who decided what (the human's changes to the AI's proposals)
+- AI-generated vs. human work
+- the AI's mistakes and how they were caught
+- what the tests do and don't prove
+
+**Placeholders left for the human:** code or doc edits made by hand, and when the real-Meta tests first ran green. Only the human knows these, so the AI didn't guess.
