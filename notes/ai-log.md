@@ -573,3 +573,43 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
 - timeline order, actors, status text, diff (`del`/`ins`/empty), `time[datetime]`
 - answers and consents
 - `humanizeKey`, `formatActor`, `formatRelative`
+
+---
+
+## Step 16 — Status change and edit flows with conflict handling
+
+**What:**
+
+- `useChangeStatus` / `useUpdateLead` mutations. On success they put the returned lead straight into the detail cache (no refetch) and invalidate the lists.
+- `StatusChanger`:
+  - one button per server-provided `allowedTransitions`
+  - the forward step is primary, "Mark as lost" is secondary, and Lost → New is labelled "Reopen"
+  - a terminal status shows "Converted is a final status."
+  - spinner and `aria-busy` while saving
+- `EditLeadDialog`:
+  - React Hook Form + zod + shadcn Field, the form stack the shadcn guidance recommends
+  - validation mirrors the API's (email, phone pattern, lengths); an empty field clears the value
+  - server `VALIDATION_ERROR` details are mapped back onto the matching fields
+- `ConflictBanner` (shadcn Alert) for 409 `VERSION_CONFLICT`:
+  - **On the page** (status change): "someone else changed this lead… nothing was saved", with Reload latest.
+  - **In the dialog** (edit): the typed values stay on screen so they can be copied; "Reload latest" resets the form to the server's values.
+- `useActorGate`: the first time someone makes a change it asks for a display name, then continues that same change. Cancelling the prompt cancels the change.
+- Toasts (sonner) confirm "Status changed to …" and "Lead updated", or "No changes to save" when the server returns the same version (a no-op, so no activity is written).
+- The status badge re-mounts on change, so it animates in (state-change feedback). Reduced motion is respected globally.
+
+**A bug the AI caught in its own code before committing:** the mutation hooks first took the actor when the hook was created. After a user typed their name in the prompt, the first save would still have sent no name, because the closure was stale. The actor is now passed with each mutation call.
+
+**Verified end to end** through the Vite proxy against the real API and database:
+
+- `PATCH /status` with `X-Actor: Zo%C3%AB` → the timeline shows "Zoë".
+- A second PATCH with the stale version → 409 `VERSION_CONFLICT`, `currentVersion: 2`, and nothing applied.
+- `PATCH /leads/:id` → the phone and assignee diff appears in the timeline.
+- A screenshot confirmed the header offers only "Move to Converted" and "Mark as lost" for a Qualified lead.
+
+**Tests:** web 50 passing.
+
+- status changer: allowed options only, Reopen, terminal, busy
+- edit dialog: submits trimmed values, client validation, conflict keeps input and reload resets it, server field errors
+- actor gate: asks then continues, doesn't re-ask, cancel aborts
+
+The mutation hooks aren't unit-tested with a mocked API (the project uses no mocks). Their server behaviour is covered by the API integration tests, and they were exercised end to end as described above.

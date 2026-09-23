@@ -1,4 +1,5 @@
 import { ArrowLeftIcon, EnvelopeSimpleIcon, PhoneIcon, UserFocusIcon } from '@phosphor-icons/react';
+import { useState, type ReactNode } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
 
 import { EmptyState } from '@/components/empty-state';
@@ -7,7 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLead } from '@/features/leads/api';
 import { ActivityTimeline } from '@/features/leads/components/activity-timeline';
+import { ConflictBanner } from '@/features/leads/components/conflict-banner';
 import { DetailList, DetailSection } from '@/features/leads/components/detail-section';
+import { LeadActions } from '@/features/leads/components/lead-actions';
 import { LeadAnswers } from '@/features/leads/components/lead-answers';
 import { LeadAttribution } from '@/features/leads/components/lead-attribution';
 import { LeadConsents } from '@/features/leads/components/lead-consents';
@@ -31,7 +34,7 @@ function BackLink() {
   );
 }
 
-function LeadHeader({ lead }: { lead: LeadDetail }) {
+function LeadHeader({ lead, actions }: { lead: LeadDetail; actions: ReactNode }) {
   return (
     <header className="flex flex-wrap items-start justify-between gap-4">
       <div className="grid min-w-0 gap-1.5">
@@ -39,7 +42,12 @@ function LeadHeader({ lead }: { lead: LeadDetail }) {
           <h1 className="truncate text-xl font-semibold tracking-tight">
             {lead.fullName ?? 'Unnamed lead'}
           </h1>
-          <StatusBadge status={lead.status} />
+          {/* Remounts on change, so the new status animates in. */}
+          <StatusBadge
+            key={lead.status}
+            status={lead.status}
+            className="animate-in duration-300 fade-in zoom-in-90"
+          />
         </div>
         <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
           {lead.email ? (
@@ -62,6 +70,7 @@ function LeadHeader({ lead }: { lead: LeadDetail }) {
           ) : null}
         </p>
       </div>
+      {actions}
     </header>
   );
 }
@@ -144,22 +153,47 @@ export function LeadDetailRoute() {
     );
   }
 
-  const data = lead.data;
+  return <LeadPage lead={lead.data} reload={() => lead.refetch().then((r) => r.data)} />;
+}
+
+function LeadPage({
+  lead,
+  reload,
+}: {
+  lead: LeadDetail;
+  reload: () => Promise<LeadDetail | undefined>;
+}) {
+  const [conflict, setConflict] = useState(false);
+  const [reloading, setReloading] = useState(false);
+
+  async function reloadAfterConflict() {
+    setReloading(true);
+    await reload();
+    setReloading(false);
+    setConflict(false);
+  }
+
   return (
     <article className="grid gap-5">
-      <title>{`${data.fullName ?? 'Unnamed lead'} · Lead Intake`}</title>
+      <title>{`${lead.fullName ?? 'Unnamed lead'} · Lead Intake`}</title>
       <BackLink />
-      <LeadHeader lead={data} />
+      {conflict ? (
+        <ConflictBanner onReload={() => void reloadAfterConflict()} reloading={reloading} />
+      ) : null}
+      <LeadHeader
+        lead={lead}
+        actions={<LeadActions lead={lead} reload={reload} onConflict={() => setConflict(true)} />}
+      />
       {/* One grid, so on mobile the timeline follows Details instead of sinking below every
           section; on desktop it becomes a sticky right-hand column. */}
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
-        <LeadDetails lead={data} />
+        <LeadDetails lead={lead} />
         <div className="lg:sticky lg:top-20 lg:col-start-2 lg:row-span-4 lg:row-start-1">
-          <ActivityTimeline activities={data.activities} />
+          <ActivityTimeline activities={lead.activities} />
         </div>
-        <LeadAnswers fieldData={data.fieldData} />
-        <LeadConsents responses={data.customDisclaimerResponses} />
-        <LeadAttribution lead={data} />
+        <LeadAnswers fieldData={lead.fieldData} />
+        <LeadConsents responses={lead.customDisclaimerResponses} />
+        <LeadAttribution lead={lead} />
       </div>
     </article>
   );
