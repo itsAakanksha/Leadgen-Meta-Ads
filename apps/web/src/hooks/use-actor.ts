@@ -1,6 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
-const STORAGE_KEY = 'lead-intake.actor';
+// Versioned so a future format change can ignore old values instead of misreading them.
+const STORAGE_KEY = 'lead-intake:actor:v1';
 const listeners = new Set<() => void>();
 
 // localStorage can throw (private mode, blocked storage); the app must still work.

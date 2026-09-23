@@ -21,9 +21,8 @@ describe('display name (actor)', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(dialog).not.toBeInTheDocument();
-    expect(screen.getByText('Sam Lee')).toBeInTheDocument();
-    expect(window.localStorage.getItem('lead-intake.actor')).toBe('Sam Lee');
-    expect(screen.getByRole('button', { name: 'Change name' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Acting as Sam Lee' })).toBeInTheDocument();
+    expect(window.localStorage.getItem('lead-intake:actor:v1')).toBe('Sam Lee');
   });
 
   it('cannot save an empty name', async () => {

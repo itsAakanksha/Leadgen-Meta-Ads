@@ -1,7 +1,16 @@
 import { useState, type FormEvent } from 'react';
 
-import { Button } from './button';
-import { Dialog } from './dialog';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 
 const MAX_LENGTH = 60;
 
@@ -25,37 +34,38 @@ export function ActorPrompt({ open, onOpenChange, initialName, onSave }: ActorPr
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Your name"
-      description="Shown in the activity timeline next to the changes you make."
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-1.5">
-          <label htmlFor="actor-name" className="text-sm font-medium">
-            Display name
-          </label>
-          <input
-            id="actor-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            maxLength={MAX_LENGTH}
-            autoComplete="name"
-            autoFocus
-            required
-            className="w-full rounded-md border border-line bg-surface px-3 py-2 text-sm"
-          />
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" disabled={!trimmed}>
-            Save
-          </Button>
-        </div>
-      </form>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <form onSubmit={handleSubmit} className="grid gap-4">
+          <DialogHeader>
+            <DialogTitle>Your name</DialogTitle>
+            <DialogDescription>
+              Shown in the activity timeline next to the changes you make.
+            </DialogDescription>
+          </DialogHeader>
+          <Field>
+            <FieldLabel htmlFor="actor-name">Display name</FieldLabel>
+            <Input
+              id="actor-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              maxLength={MAX_LENGTH}
+              autoComplete="name"
+              autoFocus
+              required
+            />
+            <FieldDescription>This is not a sign-in. Anyone can use any name.</FieldDescription>
+          </Field>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!trimmed}>
+              Save
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
     </Dialog>
   );
 }

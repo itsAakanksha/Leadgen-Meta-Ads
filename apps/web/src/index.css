@@ -1,26 +1,86 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
 
-/* Quiet ledger: warm paper, dark ink, one teal accent for actions. */
-@theme {
-  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+@custom-variant dark (&:is(.dark *));
 
-  --color-paper: #f6f4ef;
-  --color-surface: #fffdf9;
-  --color-ink: #1c1b18;
-  --color-ink-muted: #5f5b52;
-  --color-line: #e2ddd2;
-  --color-accent: #0f5c5a;
-  --color-accent-strong: #0b4745;
-  --color-accent-soft: #e0eeec;
-  --color-danger: #a3302a;
-  --color-danger-soft: #f7e3e1;
-  --color-warning-soft: #f7ecd4;
+/*
+ * Design tokens. Internal lead-ops dashboard: calm, dense, flat.
+ * - Cool zinc neutrals + ONE accent (emerald) used for primary actions, focus and links.
+ * - Status colours are data, not decoration: muted, and always paired with a text label.
+ * - One radius scale: 8px for controls and containers; status badges are pills.
+ * - Single light theme (no theme switching).
+ */
+:root {
+  --radius: 0.5rem;
 
-  --animate-fade-in: fade-in 240ms ease-out both;
-  --animate-flash: flash 900ms ease-out;
+  --background: oklch(0.985 0 0); /* zinc-50: page */
+  --foreground: oklch(0.21 0.006 285.885); /* zinc-900 */
+  --card: oklch(1 0 0); /* surfaces sit on the page without shadows */
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
 
-  @keyframes fade-in {
+  --primary: oklch(0.508 0.118 165.612); /* emerald-700: white text 5.5:1 */
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.967 0.001 286.375); /* zinc-100 */
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.967 0.001 286.375);
+  --muted-foreground: oklch(0.442 0.017 285.786); /* zinc-600: 7:1 on the page */
+  --accent: oklch(0.967 0.001 286.375); /* hover surface */
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.505 0.213 27.518); /* red-700 */
+
+  --border: oklch(0.92 0.004 286.32); /* zinc-200 */
+  --input: oklch(0.64 0.016 286); /* ~zinc-450: input borders meet WCAG 1.4.11 (>=3:1 on white) */
+  --ring: oklch(0.508 0.118 165.612);
+
+  --status-new-bg: oklch(0.92 0.004 286.32); /* zinc-200: untouched */
+  --status-new-fg: oklch(0.21 0.006 285.885); /* zinc-900 */
+  --status-contacted-bg: oklch(0.962 0.059 95.617); /* amber-100 */
+  --status-contacted-fg: oklch(0.473 0.137 46.201); /* amber-800 */
+  --status-qualified-bg: oklch(0.951 0.026 236.824); /* sky-100 */
+  --status-qualified-fg: oklch(0.443 0.11 240.79); /* sky-800 */
+  --status-converted-bg: oklch(0.95 0.052 163.051); /* emerald-100 */
+  --status-converted-fg: oklch(0.432 0.095 166.913); /* emerald-800 */
+  --status-lost-bg: oklch(0.967 0.001 286.375); /* zinc-100 */
+  --status-lost-fg: oklch(0.442 0.017 285.786); /* zinc-600 */
+}
+
+@theme inline {
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
+  --font-heading: var(--font-sans);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) * 0.75);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
+
+  --animate-enter: enter 200ms ease-out both;
+
+  @keyframes enter {
     from {
       opacity: 0;
       transform: translateY(4px);
@@ -30,24 +90,21 @@
       transform: none;
     }
   }
-
-  @keyframes flash {
-    from {
-      box-shadow: 0 0 0 4px var(--color-accent-soft);
-    }
-    to {
-      box-shadow: 0 0 0 0 transparent;
-    }
-  }
 }
 
 @layer base {
-  body {
-    @apply bg-paper font-sans text-ink antialiased;
+  * {
+    @apply border-border outline-ring/50;
   }
-
-  :focus-visible {
-    @apply outline-2 outline-offset-2 outline-accent;
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  /* Tabular figures so dates, counts and IDs line up in columns. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
   }
 }
 

@@ -1,48 +1,51 @@
+import { UserCircleIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { Link, Outlet } from 'react-router';
 
-import { ActorPrompt } from '../components/actor-prompt';
-import { Button } from '../components/button';
-import { useActor } from '../hooks/use-actor';
+import { ActorPrompt } from '@/components/actor-prompt';
+import { Button } from '@/components/ui/button';
+import { useActor } from '@/hooks/use-actor';
 
 export function AppLayout() {
   const [actor, setActor] = useActor();
   const [promptOpen, setPromptOpen] = useState(false);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:rounded focus:bg-surface focus:px-3 focus:py-2"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-card focus:px-3 focus:py-2"
       >
         Skip to content
       </a>
-      <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <Link to="/" className="flex items-center gap-2 font-semibold tracking-tight">
-            <span aria-hidden className="inline-block size-3 rounded-sm bg-accent" />
+      <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur-sm">
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+          <Link to="/" className="flex items-center gap-2.5 text-sm font-semibold tracking-tight">
+            <span aria-hidden className="grid size-6 place-items-center rounded-md bg-primary">
+              <span className="size-2 rounded-xs bg-primary-foreground" />
+            </span>
             Lead Intake
           </Link>
-          <div className="flex items-center gap-2 text-sm">
-            {actor && (
-              <span className="hidden text-ink-muted sm:inline">
-                Acting as <span className="font-medium text-ink">{actor}</span>
+          <Button variant="ghost" onClick={() => setPromptOpen(true)}>
+            <UserCircleIcon aria-hidden />
+            {actor ? (
+              <span>
+                <span className="text-muted-foreground">Acting as</span> {actor}
               </span>
+            ) : (
+              'Set your name'
             )}
-            <Button variant="ghost" onClick={() => setPromptOpen(true)}>
-              {actor ? 'Change name' : 'Set your name'}
-            </Button>
-          </div>
+          </Button>
         </div>
       </header>
 
-      <main id="main" className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+      <main id="main" className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         <Outlet />
       </main>
 
-      {promptOpen && (
+      {promptOpen ? (
         <ActorPrompt open onOpenChange={setPromptOpen} initialName={actor} onSave={setActor} />
-      )}
+      ) : null}
     </div>
   );
 }

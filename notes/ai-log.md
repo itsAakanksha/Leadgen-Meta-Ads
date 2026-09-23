@@ -429,3 +429,47 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
 - **ESLint:** `react-hooks` recommended rules and browser globals for `apps/web`.
 
 **Tests:** web 11 passing. API still 161 passing offline.
+
+---
+
+## Step 13b — Adopt shadcn/ui and a design system (human request)
+
+**Human request:** use shadcn/ui for reusable components, and apply three design skills the human installed in `.agents/skills/`:
+
+- `ui-ux-pro-max`
+- `vercel-react-best-practices`
+- `design-taste-frontend`
+
+**How the skills were applied:**
+
+- **Design read** (taste skill): an internal lead-ops dashboard for sales operators, calm, dense and Linear-style. Dials: variance 3, motion 3, density 7.
+- **ui-ux-pro-max `--design-system`:** its style ("Flat": no decorative shadows, 150–200 ms hovers) and its blue/green palette direction were used. Its landing-page pattern and scholarly serif typography didn't fit a dashboard and were rejected. As the skill instructs, it was re-queried: typography with `--domain`, and components with `--stack shadcn` (use Table for tabular data; use Field-based forms).
+- **Taste skill corrections to the AI's own earlier work:**
+  - The step-13 "warm paper + ink" palette (`#f6f4ef` / `#1c1b18`) is on the skill's banned "beige + espresso" AI-default list, so it was replaced by cool zinc neutrals with one emerald accent.
+  - Phosphor icons instead of lucide.
+  - Geist and Geist Mono instead of IBM Plex.
+  - Purple was avoided for status colours (the "lila rule").
+- **Vercel React rules:**
+  - Search debounce moved from an effect into the event handler (`rerender-move-effect-to-event`), which also removed an eslint-disable.
+  - Ternaries instead of `&&` for conditional rendering.
+  - Versioned localStorage key (`lead-intake:actor:v1`).
+  - Barrel imports were checked: Phosphor is `sideEffects: false` and Vite tree-shakes it (verified in the built bundle), so per-icon deep imports weren't needed.
+
+**What changed:**
+
+- shadcn (radix base, "nova" preset) with generated `button`, `dialog`, `input`, `textarea`, `label`, `select`, `badge`, `skeleton`, `table`, `sonner`, `field`, `separator` and `tooltip`.
+- The hand-rolled button, dialog and skeleton were removed.
+- Design tokens in `index.css`:
+  - zinc neutrals, with emerald-700 as the primary accent (white text 5.45:1)
+  - muted text 7.7:1
+  - input borders 3.37:1, meeting WCAG 1.4.11 (contrast checked with a script)
+  - one 8px radius (status badges are pills)
+  - light theme only
+- The `sonner` wrapper no longer uses `next-themes`, a Next.js theming library the SPA doesn't need.
+- `@/` import alias across the web app.
+
+**Mistakes made and caught:**
+
+- The AI thought the generated `import { cn } from "cn"` was broken. It is in fact shadcn's official `cn` package. The imports were routed through `@/lib/utils` anyway, which is harmless and matches `components.json`.
+- `pnpm format` reformatted the human's untracked `.agents/skills/*.md` files (whitespace and markdown formatting only; they can't be restored from git). `.agents/` is now in `.prettierignore` and the ESLint ignores, and the human was told.
+- A test caught an accessibility bug: the header button's accessible name was "Acting asSam Lee", because a trailing space inside a span is dropped from the name. Fixed.
