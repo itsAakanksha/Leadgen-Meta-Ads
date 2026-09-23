@@ -5,6 +5,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   DATABASE_URL: z.url(),
+  // Must match the "Verify Token" entered in the Meta App Dashboard (Webhooks product).
+  META_VERIFY_TOKEN: z.string().min(16, 'must be at least 16 characters'),
 });
 
 export type Config = {
@@ -12,6 +14,9 @@ export type Config = {
   port: number;
   logLevel: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
   databaseUrl: string;
+  meta: {
+    verifyToken: string;
+  };
 };
 
 /** The only place that reads process.env. Fails fast with every invalid variable listed. */
@@ -30,5 +35,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     port: parsed.PORT,
     logLevel: parsed.LOG_LEVEL,
     databaseUrl: parsed.DATABASE_URL,
+    meta: {
+      verifyToken: parsed.META_VERIFY_TOKEN,
+    },
   };
 }

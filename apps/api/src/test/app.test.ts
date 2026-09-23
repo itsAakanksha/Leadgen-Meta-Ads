@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { afterAll, describe, expect, it } from 'vitest';
 
+import { testConfig } from '../../test/support/config.js';
 import { createTestPrisma } from '../../test/support/database.js';
 import { silentLogger } from '../../test/support/logger.js';
 import { createApp } from '../app.js';
@@ -8,7 +9,7 @@ import { createPrisma } from '../lib/prisma.js';
 
 describe('app', () => {
   const prisma = createTestPrisma();
-  const app = createApp({ logger: silentLogger, prisma });
+  const app = createApp({ config: testConfig(), logger: silentLogger, prisma });
 
   afterAll(() => prisma.$disconnect());
 
@@ -20,7 +21,7 @@ describe('app', () => {
 
   it('GET /health returns 503 when the database is unreachable', async () => {
     const deadPrisma = createPrisma('postgresql://postgres:postgres@127.0.0.1:1/none');
-    const deadApp = createApp({ logger: silentLogger, prisma: deadPrisma });
+    const deadApp = createApp({ config: testConfig(), logger: silentLogger, prisma: deadPrisma });
     const res = await request(deadApp).get('/health');
     expect(res.status).toBe(503);
     expect(res.body).toEqual({ status: 'unavailable' });

@@ -118,3 +118,22 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
 - **ESLint `no-unsafe-*` rules are relaxed for test files only,** because supertest's `res.body` is typed `any`.
 
 **Tests:** 15 passing: config, error handler, health/503, request ID.
+
+---
+
+## Step 4 — Meta verification handshake
+
+**What:**
+
+- `GET /webhook/meta-lead` accepts `hub.mode=subscribe` with a matching `hub.verify_token` and echoes `hub.challenge` as `text/plain`.
+- `lib/crypto.ts` provides `safeEqual`.
+- `META_VERIFY_TOKEN` is added to config (min 16 chars).
+
+**Decisions:**
+
+- **The verify token is compared in constant time.** Both sides are SHA-256 hashed first, so a length mismatch doesn't leak through timing or through `timingSafeEqual` throwing.
+- **The challenge is echoed only if it matches `^[A-Za-z0-9_-]{1,256}$`.** Meta sends an integer, and this stops the endpoint from being used to reflect arbitrary content.
+- **Failures go through `AppError`,** keeping one error path and one error envelope.
+- **The composition root now takes `config`.** Tests build the app with `testConfig()`, which contains fixture values only.
+
+**Tests:** 22 passing. The handshake tests cover the correct token, a wrong token, a prefix-of-token, the wrong mode, missing parameters, and a script-injection challenge.

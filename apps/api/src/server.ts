@@ -7,7 +7,7 @@ const config = loadConfig();
 const logger = createLogger(config.logLevel);
 const prisma = createPrisma(config.databaseUrl);
 
-const app = createApp({ logger, prisma });
+const app = createApp({ config, logger, prisma });
 const server = app.listen(config.port, () => {
   logger.info({ port: config.port, env: config.nodeEnv }, 'API listening');
 });
