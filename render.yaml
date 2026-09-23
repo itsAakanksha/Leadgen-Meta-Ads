@@ -1,0 +1,30 @@
+# Render Blueprint for the API (free plan). Render → New → Blueprint → pick this repo.
+# Secrets use `sync: false`: Render asks for their values when the Blueprint is created.
+services:
+  - type: web
+    name: lead-intake-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: GRAPH_API_VERSION
+        value: v25.0
+      # Supabase "Session pooler" connection string for both (Render has no IPv6 egress,
+      # and Supabase's direct connection is IPv6-only on the free plan).
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: META_VERIFY_TOKEN
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_PAGE_ACCESS_TOKEN
+        sync: false
