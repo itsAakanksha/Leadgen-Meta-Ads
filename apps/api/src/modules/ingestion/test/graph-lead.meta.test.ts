@@ -16,7 +16,7 @@ describe('Graph API client (real Meta)', () => {
 
   beforeAll(async () => {
     leadgenId = await recreateTestLead(graph, env.testFormId);
-  }, 30_000);
+  });
 
   it('fetches a real lead with the fields we request, and it maps cleanly', async () => {
     const response = await graph.get(leadgenId, { fields: GRAPH_LEAD_FIELDS });

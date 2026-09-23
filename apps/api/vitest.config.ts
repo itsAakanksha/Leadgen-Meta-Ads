@@ -13,5 +13,8 @@ export default defineConfig({
     globalSetup: ['test/support/global-setup.ts'],
     // Integration tests share one database, so test files run one at a time.
     fileParallelism: false,
+    // Some tests call the real Graph API, whose latency varies a lot by network.
+    testTimeout: 60_000,
+    hookTimeout: 60_000,
   },
 });

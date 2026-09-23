@@ -373,3 +373,19 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
 - A 3-copy batch, then 2 more deliveries of the same ID → exactly 1 stored event. Logs: `received 3 / stored 1`, then `received 1 / stored 0` twice.
 - `--bad-signature` → 401.
 - The server log was grepped for the app secret, the token and any `sha256=` signature: 0 matches.
+
+---
+
+## Fix — Real-Meta tests were sensitive to network latency
+
+**What happened:**
+
+- After step 12, one real-Meta retry test failed. Its call to `graph.facebook.com` hit the Graph client's 10s timeout, so the recorded error was `network error` rather than Meta's code 190. A plain `curl` from this machine to Graph took 22s, which confirms slow network latency.
+- The code behaved correctly: the attempt was recorded, retried and sanitised. The test was too strict about _which_ failure it would see.
+- **AI process mistake:** the step 12 commit command was chained on a `grep` that succeeded even though a test had failed, so step 12 was committed with one failing test. The AI then reran each test file separately to confirm the failure was network-related rather than a regression, and fixed it in a follow-up commit.
+
+**Fix:**
+
+- The retry test accepts `code 190 | network error`. Its purpose is to check that a failure is recorded and retried, and either error proves that.
+- Global Vitest `testTimeout` and `hookTimeout` set to 60s, because some tests call the real Graph API. Per-test overrides removed.
+- The Graph client's 10s production timeout is unchanged: a slow Meta response is exactly what the retry/backoff path is for.

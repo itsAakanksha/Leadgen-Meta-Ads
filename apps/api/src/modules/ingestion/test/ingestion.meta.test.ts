@@ -29,7 +29,7 @@ describe('ingestion pipeline (real Meta)', () => {
 
   beforeAll(async () => {
     leadgenId = await recreateTestLead(createTestGraphClient(env), env.testFormId);
-  }, 30_000);
+  });
   beforeEach(() => resetDatabase(prisma));
   afterAll(() => prisma.$disconnect());
 
@@ -63,7 +63,7 @@ describe('ingestion pipeline (real Meta)', () => {
     const event = await prisma.webhookEvent.findUniqueOrThrow({ where: { leadgenId } });
     expect(event.status).toBe('done');
     expect(event.processedAt).toBeInstanceOf(Date);
-  }, 30_000);
+  });
 
   it('never duplicates the lead or its activity, even if the event is reprocessed', async () => {
     const body = leadgenBody([{ leadgen_id: leadgenId }]);
@@ -77,7 +77,7 @@ describe('ingestion pipeline (real Meta)', () => {
 
     expect(await prisma.lead.count()).toBe(1);
     expect(await prisma.leadActivity.count()).toBe(1);
-  }, 30_000);
+  });
 
   it('rolls back the lead if writing its audit record fails (atomicity)', async () => {
     // Real database failure injected with a temporary trigger on the activity table.
@@ -89,5 +89,5 @@ describe('ingestion pipeline (real Meta)', () => {
     expect(await prisma.lead.count()).toBe(0); // no lead without its audit record
     const event = await prisma.webhookEvent.findUniqueOrThrow({ where: { leadgenId } });
     expect(event).toMatchObject({ status: 'pending', attempts: 1 });
-  }, 30_000);
+  });
 });
