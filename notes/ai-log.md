@@ -389,3 +389,43 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
 - The retry test accepts `code 190 | network error`. Its purpose is to check that a failure is recorded and retried, and either error proves that.
 - Global Vitest `testTimeout` and `hookTimeout` set to 60s, because some tests call the real Graph API. Per-test overrides removed.
 - The Graph client's 10s production timeout is unchanged: a slow Meta response is exactly what the retry/backoff path is for.
+
+---
+
+## Step 13 — Vite React app scaffold: routing, API client, actor prompt
+
+**What:**
+
+- `apps/web`: React 19, Vite 8, Tailwind 4, React Router 7, TanStack Query, and a Radix Dialog. Structure follows Bulletproof React:
+  - `app/` for the layout, provider, router and routes
+  - shared `components/`, `hooks/` and `lib/`
+- `lib/api-client.ts`:
+  - `apiRequest()` against same-origin `/api`
+  - `ApiError`, which carries the server's error envelope
+  - `actorHeader()`, which URI-encodes the display name
+- `lib/query-client.ts`: retries only network errors and 5xx (Render's free tier cold-starts in ~50s); never retries 4xx.
+- `hooks/use-actor.ts`: the display name, stored in localStorage via `useSyncExternalStore`. It still works if storage throws.
+- Layout:
+  - header with "Acting as …" and a Change-name dialog
+  - skip link
+  - a `/privacy` page, because Meta requires a privacy policy and data-deletion URL before an app can go Live
+- Vite dev proxy: `/api/*` → `API_PROXY_TARGET` (default `localhost:4000`), with the `/api` prefix stripped.
+
+**Design (frontend-design skill):**
+
+- Visual thesis: a "quiet ledger".
+  - warm paper background, ink text, and one deep-teal accent for actions
+  - IBM Plex Sans with Plex Mono for IDs and timestamps
+  - status always shown as text
+- Motion is CSS only: fade-in for dialogs and timeline entries, a flash on status change. It respects `prefers-reduced-motion`.
+
+**Decisions:**
+
+- **React Router 7.18 instead of 8.x.** v8 requires Node ≥22.22 and this machine runs 22.17.
+- **The privacy page's contact email comes from `VITE_PRIVACY_CONTACT_EMAIL`.** The AI first hard-coded the developer's personal email, then noticed and moved it to a build-time variable, so no personal address is committed.
+- **Web tests use no mocked API.**
+  - Tested directly: pure logic (error mapping, retry policy, header encoding).
+  - Rendered with real props and real localStorage: components.
+- **ESLint:** `react-hooks` recommended rules and browser globals for `apps/web`.
+
+**Tests:** web 11 passing. API still 161 passing offline.

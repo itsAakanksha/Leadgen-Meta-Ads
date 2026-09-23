@@ -1,0 +1,61 @@
+@import 'tailwindcss';
+
+/* Quiet ledger: warm paper, dark ink, one teal accent for actions. */
+@theme {
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --color-paper: #f6f4ef;
+  --color-surface: #fffdf9;
+  --color-ink: #1c1b18;
+  --color-ink-muted: #5f5b52;
+  --color-line: #e2ddd2;
+  --color-accent: #0f5c5a;
+  --color-accent-strong: #0b4745;
+  --color-accent-soft: #e0eeec;
+  --color-danger: #a3302a;
+  --color-danger-soft: #f7e3e1;
+  --color-warning-soft: #f7ecd4;
+
+  --animate-fade-in: fade-in 240ms ease-out both;
+  --animate-flash: flash 900ms ease-out;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes flash {
+    from {
+      box-shadow: 0 0 0 4px var(--color-accent-soft);
+    }
+    to {
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-paper font-sans text-ink antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}
