@@ -9,6 +9,13 @@ const envSchema = z.object({
   META_VERIFY_TOKEN: z.string().min(16, 'must be at least 16 characters'),
   // Meta App Secret (App Dashboard > Settings > Basic). Used to verify X-Hub-Signature-256.
   META_APP_SECRET: z.string().min(1),
+  // Long-lived Page access token with leads_retrieval. Used to fetch lead details.
+  META_PAGE_ACCESS_TOKEN: z.string().min(1),
+  // Pinned so a Meta release never changes response shapes under us.
+  GRAPH_API_VERSION: z
+    .string()
+    .regex(/^vd+.d+$/, 'must look like v25.0')
+    .default('v25.0'),
 });
 
 export type Config = {
@@ -19,6 +26,8 @@ export type Config = {
   meta: {
     verifyToken: string;
     appSecret: string;
+    pageAccessToken: string;
+    graphApiVersion: string;
   };
 };
 
@@ -41,6 +50,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     meta: {
       verifyToken: parsed.META_VERIFY_TOKEN,
       appSecret: parsed.META_APP_SECRET,
+      pageAccessToken: parsed.META_PAGE_ACCESS_TOKEN,
+      graphApiVersion: parsed.GRAPH_API_VERSION,
     },
   };
 }

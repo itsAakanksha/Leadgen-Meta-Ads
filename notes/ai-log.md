@@ -162,3 +162,34 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
 - Signature: valid, uppercase hex, tampered, wrong secret, missing, no prefix, `sha1`, truncated/non-hex, re-serialised unicode.
 - Payload: Meta's docs example with numeric IDs, batches, other fields ignored, non-page object, unknown keys kept, invalid shapes.
 - Integration: stored, 401, redelivery dedupe, batch duplicates, 5 concurrent identical deliveries → 1 row, ID above 2^53, 400.
+
+---
+
+## Step 6 — Graph API client and lead field mapping
+
+**What:**
+
+- `lib/graph-client.ts`: a minimal Graph client (`get/post/delete`) that throws a sanitised `GraphApiError`.
+- `ingestion/lead-mapping.ts`:
+  - the `GRAPH_LEAD_FIELDS` list
+  - a zod schema for the Graph lead response
+  - a pure `mapGraphLead` that produces `CreateLeadInput`, defined in `leads/leads.schemas.ts` as the leads module's input contract
+- Config: `META_PAGE_ACCESS_TOKEN` and `GRAPH_API_VERSION` (default `v25.0`).
+- Real-Meta test support:
+  - `requireMetaTestEnv()` fails loudly when credentials are missing
+  - `recreateTestLead()` deletes any existing test lead, then calls `POST /{form_id}/test_leads`
+
+**Decisions:**
+
+- **The access token goes in the `Authorization: Bearer` header, not the query string,** so it can't appear in URL logs.
+- **`GraphApiError` keeps only HTTP status, Meta error code, type and `fbtrace_id`.** Meta's message text is dropped, since it can echo request data, and so is the token. Network errors are rethrown without the original error, which contains the URL.
+- **Requests time out after 10 seconds.**
+- **Fields are requested explicitly.** Without `fields=`, Graph returns only `id/created_time/ad_id/form_id/field_data`.
+- **`is_checked` is normalised:** Meta returns both `"1"/"0"` and booleans. `full_name` falls back to `first_name + last_name`, and blank answers become `null`.
+- **The plan's "error classification" was dropped as unnecessary.** The worker retries every Graph error up to its maximum anyway.
+- **Tests that call real Meta are named `*.meta.test.ts`.** `pnpm test` runs everything and fails loudly without credentials. `pnpm test:offline` explicitly skips them, for anyone without Meta access.
+
+**Status:**
+
+- The real-Graph tests (fetch a real test lead, error 100, error 190) are written but **not yet executed**. The human is still finishing the Meta app setup.
+- 60 offline tests pass.

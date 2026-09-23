@@ -6,6 +6,7 @@ const validEnv = {
   DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
   META_VERIFY_TOKEN: 'verify-token-0123456789',
   META_APP_SECRET: 'app-secret',
+  META_PAGE_ACCESS_TOKEN: 'page-token',
 };
 
 describe('loadConfig', () => {
@@ -15,7 +16,12 @@ describe('loadConfig', () => {
       port: 4000,
       logLevel: 'info',
       databaseUrl: validEnv.DATABASE_URL,
-      meta: { verifyToken: validEnv.META_VERIFY_TOKEN, appSecret: validEnv.META_APP_SECRET },
+      meta: {
+        verifyToken: validEnv.META_VERIFY_TOKEN,
+        appSecret: validEnv.META_APP_SECRET,
+        pageAccessToken: validEnv.META_PAGE_ACCESS_TOKEN,
+        graphApiVersion: 'v25.0',
+      },
     });
   });
 
