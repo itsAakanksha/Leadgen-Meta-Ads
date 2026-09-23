@@ -90,3 +90,31 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
 
 - Prisma refuses `migrate reset` when an AI agent invokes it. The AI didn't bypass that guard; it recreated its own throwaway compose volume instead.
 - The AI accidentally copied a temp file outside the repo, then noticed and moved it to its scratch directory.
+
+---
+
+## Step 3 — Express bootstrap
+
+**What:**
+
+- `lib/config.ts`: zod-validated env, and the only place that reads `process.env`.
+- `lib/logger.ts`: pino plus pino-http, with `X-Request-Id` handling.
+- `lib/prisma.ts`: a client factory using `@prisma/adapter-pg`.
+- `lib/errors.ts`: `AppError` hierarchy, error envelope, 404 handler, and mapping for body-parser errors.
+- `app.ts`: the composition root, taking explicit dependencies.
+- `/health`: pings the DB and returns 503 if it's down.
+- `server.ts`: graceful shutdown.
+- Test support:
+  - global setup runs `prisma migrate deploy` against the test DB
+  - `resetDatabase` uses TRUNCATE, because the audit trigger blocks DELETE
+  - a silent logger for tests
+
+**Decisions:**
+
+- **The HTTP log serializer emits only `id/method/path/statusCode`.** No headers, no bodies, and no query string: the Meta handshake carries the verify token in the query. A smoke run confirmed `?hub.verify_token=SECRET` never appears in logs.
+- **Config errors list variable names but never values,** since a value could be a secret. A test covers this.
+- **Unexpected errors return a generic 500.** Details are logged server-side only.
+- **Integration tests run against real Postgres** (`lead_intake_test`), serially (`fileParallelism: false`).
+- **ESLint `no-unsafe-*` rules are relaxed for test files only,** because supertest's `res.body` is typed `any`.
+
+**Tests:** 15 passing: config, error handler, health/503, request ID.

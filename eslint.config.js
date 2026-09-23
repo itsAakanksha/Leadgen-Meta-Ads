@@ -24,6 +24,14 @@ export default tseslint.config(
     },
   },
   {
+    // supertest's res.body is `any`; asserting on it is the point of these tests.
+    files: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+    },
+  },
+  {
     files: ['**/*.js'],
     ...tseslint.configs.disableTypeChecked,
   },
