@@ -1,4 +1,4 @@
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -22,7 +22,18 @@ const submittedAt = (lead: LeadSummary) => formatDateTime(lead.metaCreatedAt ?? 
 const COLUMNS = ['Lead', 'Status', 'Source', 'Campaign', 'Submitted'] as const;
 
 /** Table on wide screens, stacked list on narrow ones. Each lead links to its detail page. */
-export function LeadsTable({ leads }: { leads: LeadSummary[] }) {
+export function LeadsTable({
+  leads,
+  onLeadIntent,
+}: {
+  leads: LeadSummary[];
+  /** Hover/focus on a lead: a hint to start loading it. */
+  onLeadIntent?: (id: string) => void;
+}) {
+  // Remember the filtered list URL so "Back to leads" returns to the same view.
+  const location = useLocation();
+  const linkState = { backTo: `${location.pathname}${location.search}` };
+
   return (
     <>
       <div className="hidden overflow-hidden rounded-lg border bg-card md:block">
@@ -44,6 +55,9 @@ export function LeadsTable({ leads }: { leads: LeadSummary[] }) {
                 <TableCell className="py-3">
                   <Link
                     to={`/leads/${lead.id}`}
+                    state={linkState}
+                    onMouseEnter={() => onLeadIntent?.(lead.id)}
+                    onFocus={() => onLeadIntent?.(lead.id)}
                     className="font-medium outline-none after:absolute after:inset-0 after:rounded-sm focus-visible:after:ring-2 focus-visible:after:ring-ring"
                   >
                     {displayName(lead)}
@@ -69,6 +83,9 @@ export function LeadsTable({ leads }: { leads: LeadSummary[] }) {
           <li key={lead.id}>
             <Link
               to={`/leads/${lead.id}`}
+              state={linkState}
+              onTouchStart={() => onLeadIntent?.(lead.id)}
+              onFocus={() => onLeadIntent?.(lead.id)}
               className="grid gap-1 px-4 py-3 outline-none focus-visible:bg-muted/50 active:bg-muted/50"
             >
               <span className="flex items-center justify-between gap-3">

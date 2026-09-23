@@ -5,7 +5,7 @@ import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { Pagination } from '@/components/pagination';
 import { Button } from '@/components/ui/button';
-import { PAGE_SIZE, useLeads } from '@/features/leads/api';
+import { PAGE_SIZE, useLeads, usePrefetchLead } from '@/features/leads/api';
 import { LeadFilters } from '@/features/leads/components/lead-filters';
 import { LeadsTable, LeadsTableSkeleton } from '@/features/leads/components/leads-table';
 import {
@@ -17,10 +17,19 @@ import {
 } from '@/features/leads/leads-query';
 import { cn } from '@/lib/utils';
 
+import { loadLeadDetailRoute } from '../lazy-routes';
+
 export function LeadsListRoute() {
   const [params, setParams] = useSearchParams();
   const query = parseLeadsQuery(params);
   const leads = useLeads(query);
+  const prefetchLead = usePrefetchLead();
+
+  // Hovering or focusing a lead starts loading its page code and data before the click.
+  const handleLeadIntent = (id: string) => {
+    void loadLeadDetailRoute();
+    prefetchLead(id);
+  };
 
   // Functional updates read the latest URL, so a debounced search never overwrites a newer filter.
   const changeFilters = (patch: LeadsFilterPatch) =>
@@ -87,7 +96,7 @@ export function LeadsListRoute() {
           aria-busy={leads.isPlaceholderData}
           className={cn('grid gap-4 transition-opacity', leads.isPlaceholderData && 'opacity-60')}
         >
-          <LeadsTable leads={leads.data.data} />
+          <LeadsTable leads={leads.data.data} onLeadIntent={handleLeadIntent} />
           <Pagination
             page={query.page}
             pageSize={PAGE_SIZE}

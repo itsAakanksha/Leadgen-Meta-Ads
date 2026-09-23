@@ -520,3 +520,56 @@ Tool: Claude Code (Claude Opus 5.5), with the human reviewing every step.
 - table links, column headers and fallbacks
 - pagination range and disabled states
 - actor prompt
+
+---
+
+## Step 15 — Lead detail view with answers, consents, attribution and timeline
+
+**What:**
+
+- `/leads/:id` is lazy-loaded (its own 31.7 kB chunk).
+- Page structure:
+  - back link that returns to the same filtered list
+  - header with name, status and `mailto:`/`tel:` links
+  - Details
+  - Form answers (every `field_data` item, keys humanised)
+  - Consents ("Agreed"/"Not agreed" in words, not only an icon)
+  - Source (channel, campaign, ad set, ad, form ID, Meta lead ID, submitted vs received)
+  - Activity timeline
+- Timeline:
+  - newest first
+  - icon per event type
+  - actor (`Meta` / name / `Anonymous`)
+  - relative time inside `<time dateTime>`, with the absolute time as a tooltip
+  - status changes shown as from → to badges
+  - `LEAD_UPDATED` shown as a field-level diff (`<del>` old, `<ins>` new, "empty" for null)
+- States:
+  - skeleton plus the cold-start hint
+  - "Lead not found" (404/400)
+  - error with retry
+- Per-page `<title>` via React 19 metadata hoisting.
+
+**Vercel React rules applied:**
+
+- `bundle-dynamic-imports`: the detail route is lazy-loaded.
+- `bundle-preload`: hover/focus/touch on a lead preloads the route chunk and prefetches the lead with TanStack `prefetchQuery`, cached for the stale time.
+- `js-tosorted-immutable`: `toReversed()`.
+- Formatters are created once at module level.
+
+**Decisions:**
+
+- The route preload lives in `app/lazy-routes.ts`. The AI first put `import('@/app/…')` inside `features/leads/api.ts`, which broke the one-way rule (features must not import from app), and moved it before committing.
+- The back-link target comes from router state and is only accepted if it's an in-app path (starts with `/`, not `//`).
+- Answers show humanised question keys. Real question labels would need a form fetch, which is deferred (README future work).
+
+**Visual verification** (headless Chrome, local API + DB with sample rows):
+
+- **On mobile, the timeline sat below every other section.** Changed to one grid in DOM order Details → Activity → Answers → Consents → Source; on desktop Activity is a sticky right column.
+- **On mobile, label/value pairs were equally spaced.** Each pair is now grouped.
+- **Label columns differed between sections.** They now share a fixed 10rem width.
+
+**Tests:** web 39 passing:
+
+- timeline order, actors, status text, diff (`del`/`ins`/empty), `time[datetime]`
+- answers and consents
+- `humanizeKey`, `formatActor`, `formatRelative`
