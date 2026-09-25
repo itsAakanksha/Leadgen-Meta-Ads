@@ -1,3 +1,4 @@
+import { IconContext } from '@phosphor-icons/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 
@@ -10,10 +11,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(createQueryClient);
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        {children}
-        <Toaster position="bottom-right" />
-      </TooltipProvider>
+      {/* Precise, light-weight icons by default (DESIGN.md §4); small glyphs opt into heavier weights. */}
+      <IconContext.Provider value={{ weight: 'light' }}>
+        <TooltipProvider>
+          {children}
+          <Toaster position="bottom-right" />
+        </TooltipProvider>
+      </IconContext.Provider>
     </QueryClientProvider>
   );
 }

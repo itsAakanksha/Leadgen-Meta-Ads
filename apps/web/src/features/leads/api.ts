@@ -9,7 +9,14 @@ import { useCallback } from 'react';
 
 import { apiRequest } from '@/lib/api-client';
 
-import type { EditableField, LeadDetail, LeadsPage, LeadsQuery, LeadStatus } from './types';
+import {
+  LEAD_STATUSES,
+  type EditableField,
+  type LeadDetail,
+  type LeadsPage,
+  type LeadsQuery,
+  type LeadStatus,
+} from './types';
 
 export const PAGE_SIZE = 20;
 
@@ -32,6 +39,34 @@ export function useLeads(query: LeadsQuery) {
     queryFn: ({ signal }) =>
       apiRequest<LeadsPage>('/leads', { query: { ...query, limit: PAGE_SIZE }, signal }),
     // Keep showing the current page while the next one loads (no flash of skeletons).
+    placeholderData: keepPreviousData,
+  });
+}
+
+export type StatusCounts = Record<LeadStatus, number>;
+
+/**
+ * How many leads sit in each status under the current search and platform filters (the status
+ * filter itself is ignored, so every tab shows its own count). The API has no aggregate
+ * endpoint, so this asks for one row per status and reads `total`. Lives under the list key,
+ * so any change to a lead refreshes it.
+ */
+export function useStatusCounts({ q, platform }: Pick<LeadsQuery, 'q' | 'platform'>) {
+  return useQuery({
+    queryKey: [...leadKeys.all, 'list', 'counts', { q, platform }] as const,
+    queryFn: async ({ signal }) => {
+      const totals = await Promise.all(
+        LEAD_STATUSES.map((status) =>
+          apiRequest<LeadsPage>('/leads', {
+            query: { q, platform, status, page: 1, limit: 1 },
+            signal,
+          }).then((r) => r.total),
+        ),
+      );
+      return Object.fromEntries(
+        LEAD_STATUSES.map((status, i) => [status, totals[i] ?? 0]),
+      ) as StatusCounts;
+    },
     placeholderData: keepPreviousData,
   });
 }

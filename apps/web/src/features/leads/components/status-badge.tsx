@@ -22,7 +22,14 @@ const STATUS_STYLES: Record<LeadStatus, string> = {
 
 export function StatusBadge({ status, className }: { status: LeadStatus; className?: string }) {
   return (
-    <Badge variant="secondary" className={cn(STATUS_STYLES[status], className)}>
+    <Badge
+      variant="secondary"
+      className={cn(
+        'h-5.5 rounded-xs px-1.5 ring-1 ring-current/15 ring-inset',
+        STATUS_STYLES[status],
+        className,
+      )}
+    >
       <span aria-hidden className="size-1.5 rounded-full bg-current" />
       {STATUS_LABELS[status]}
     </Badge>

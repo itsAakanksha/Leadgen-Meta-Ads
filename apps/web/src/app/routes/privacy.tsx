@@ -32,7 +32,10 @@ export function PrivacyRoute() {
         {contactEmail ? (
           <>
             {' at '}
-            <a className="text-accent underline" href={`mailto:${contactEmail}`}>
+            <a
+              className="text-primary underline underline-offset-2"
+              href={`mailto:${contactEmail}`}
+            >
               {contactEmail}
             </a>
           </>

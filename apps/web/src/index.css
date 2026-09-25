@@ -7,46 +7,61 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design tokens. Internal lead-ops dashboard: calm, dense, flat.
- * - Cool zinc neutrals + ONE accent (emerald) used for primary actions, focus and links.
+ * Design tokens. "Soft Structuralism", tangerine on warm stone — see DESIGN.md for the reasoning behind each one.
+ * - Warm stone neutrals + ONE accent (tangerine) for actions, focus and progress.
  * - Status colours are data, not decoration: muted, and always paired with a text label.
- * - One radius scale: 8px for controls and containers; status badges are pills.
- * - Single light theme (no theme switching).
+ * - Radius: 6px chips, 10px controls, 14px surface cores, 20px trays, pills for actions.
+ * - Depth from nested trays and ink-tinted shadows, never heavy grey borders.
+ * - Single light theme.
  */
 :root {
-  --radius: 0.5rem;
+  --radius: 0.625rem;
 
-  --background: oklch(0.985 0 0); /* zinc-50: page */
-  --foreground: oklch(0.21 0.006 285.885); /* zinc-900 */
-  --card: oklch(1 0 0); /* surfaces sit on the page without shadows */
+  /* Warm stone neutrals (Tailwind stone family), one hue angle (~60) throughout. */
+  --frame: oklch(0.948 0.005 70); /* app chrome: sidebar and the gutter around the canvas */
+  --background: oklch(0.985 0.002 75); /* the raised canvas pages are drawn on */
+  --foreground: oklch(0.216 0.006 56.043); /* stone-900 */
+  --card: oklch(1 0 0);
   --card-foreground: var(--foreground);
   --popover: oklch(1 0 0);
   --popover-foreground: var(--foreground);
 
-  --primary: oklch(0.508 0.118 165.612); /* emerald-700: white text 5.5:1 */
+  --primary: oklch(0.553 0.195 38.402); /* orange-700 "deep tangerine": white text 5.1:1 */
+  --primary-hover: oklch(0.47 0.157 37.304); /* orange-800 */
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.967 0.001 286.375); /* zinc-100 */
+  --secondary: oklch(0.97 0.003 75); /* stone-100 */
   --secondary-foreground: var(--foreground);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.442 0.017 285.786); /* zinc-600: 7:1 on the page */
-  --accent: oklch(0.967 0.001 286.375); /* hover surface */
+  --muted: oklch(0.97 0.003 75);
+  --muted-foreground: oklch(0.444 0.011 73.639); /* stone-600: ~7:1 on the canvas */
+  --accent: oklch(0.97 0.003 75); /* hover surface */
   --accent-foreground: var(--foreground);
   --destructive: oklch(0.505 0.213 27.518); /* red-700 */
 
-  --border: oklch(0.92 0.004 286.32); /* zinc-200 */
-  --input: oklch(0.64 0.016 286); /* ~zinc-450: input borders meet WCAG 1.4.11 (>=3:1 on white) */
-  --ring: oklch(0.508 0.118 165.612);
+  --border: oklch(0.923 0.003 48.717); /* stone-200 */
+  --input: oklch(0.64 0.012 60); /* input borders meet WCAG 1.4.11 (>=3:1 on white) */
+  --ring: oklch(0.553 0.195 38.402);
 
-  --status-new-bg: oklch(0.92 0.004 286.32); /* zinc-200: untouched */
-  --status-new-fg: oklch(0.21 0.006 285.885); /* zinc-900 */
-  --status-contacted-bg: oklch(0.962 0.059 95.617); /* amber-100 */
-  --status-contacted-fg: oklch(0.473 0.137 46.201); /* amber-800 */
+  /* Status hues are data. None of them is orange, so the accent always means "act here". */
+  --status-new-bg: oklch(0.923 0.003 48.717); /* stone-200: untouched */
+  --status-new-fg: oklch(0.216 0.006 56.043); /* stone-900 */
+  --status-contacted-bg: oklch(0.948 0.025 290); /* soft violet-slate */
+  --status-contacted-fg: oklch(0.44 0.11 290); /* 7:1 on its chip */
   --status-qualified-bg: oklch(0.951 0.026 236.824); /* sky-100 */
   --status-qualified-fg: oklch(0.443 0.11 240.79); /* sky-800 */
   --status-converted-bg: oklch(0.95 0.052 163.051); /* emerald-100 */
   --status-converted-fg: oklch(0.432 0.095 166.913); /* emerald-800 */
-  --status-lost-bg: oklch(0.967 0.001 286.375); /* zinc-100 */
-  --status-lost-fg: oklch(0.442 0.017 285.786); /* zinc-600 */
+  --status-lost-bg: oklch(0.97 0.003 75); /* stone-100 */
+  --status-lost-fg: oklch(0.444 0.011 73.639); /* stone-600 */
+
+  /* Warnings (conflicts, cold start) — amber, separate from any status. */
+  --warning-bg: oklch(0.962 0.059 95.617); /* amber-100 */
+  --warning-fg: oklch(0.473 0.137 46.201); /* amber-800 */
+
+  --surface-subtle: oklch(0.975 0.003 75); /* table heads, diff boxes */
+  --hairline: oklch(0.94 0.004 70); /* row dividers inside a surface */
+  --tray: oklch(0.216 0.006 56 / 0.04); /* outer shell of a double-bezel surface */
+
+  --ease-out-soft: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 @theme inline {
@@ -54,6 +69,7 @@
   --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
   --font-heading: var(--font-sans);
 
+  --color-frame: var(--frame);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -72,22 +88,70 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-primary-hover: var(--primary-hover);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-fg: var(--warning-fg);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-hairline: var(--hairline);
 
-  --radius-sm: calc(var(--radius) * 0.75);
+  --color-tray: var(--tray);
+
+  /* Shadows are tinted with the ink hue, stacked from contact to ambient, one light source. */
+  --shadow-panel: 0 1px 2px oklch(0.216 0.006 56 / 0.04);
+  --shadow-canvas:
+    0 0 0 1px oklch(0.216 0.006 56 / 0.05), 0 1px 2px oklch(0.216 0.006 56 / 0.04),
+    0 12px 40px -24px oklch(0.216 0.006 56 / 0.18);
+  --shadow-raised:
+    0 0 0 1px oklch(0.216 0.006 56 / 0.07), 0 1px 2px oklch(0.216 0.006 56 / 0.05),
+    0 8px 24px -12px oklch(0.216 0.006 56 / 0.12);
+  --shadow-core:
+    inset 0 1px 0 oklch(1 0 0), 0 0 0 1px oklch(0.216 0.006 56 / 0.06),
+    0 1px 2px oklch(0.216 0.006 56 / 0.05), 0 6px 20px -10px oklch(0.216 0.006 56 / 0.14);
+  --shadow-control: 0 0 0 1px oklch(0.216 0.006 56 / 0.09), 0 1px 2px oklch(0.216 0.006 56 / 0.06);
+  --shadow-primary:
+    inset 0 1px 0 oklch(1 0 0 / 0.2), 0 0 0 1px oklch(0.47 0.157 37.3),
+    0 1px 2px oklch(0.35 0.12 38 / 0.3), 0 4px 14px -4px oklch(0.553 0.195 38.4 / 0.4);
+
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.5rem;
   --radius-md: var(--radius);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.5);
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.25rem;
 
-  --animate-enter: enter 200ms ease-out both;
+  --ease-soft: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --animate-enter: enter 320ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  --animate-shimmer: shimmer 1.6s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  --animate-live: live 2.4s cubic-bezier(0.32, 0.72, 0, 1) infinite;
 
   @keyframes enter {
     from {
       opacity: 0;
-      transform: translateY(4px);
+      transform: translateY(8px);
     }
     to {
       opacity: 1;
       transform: none;
+    }
+  }
+  @keyframes shimmer {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes live {
+    0% {
+      opacity: 0.7;
+      transform: scale(1);
+    }
+    70%,
+    100% {
+      opacity: 0;
+      transform: scale(2.6);
     }
   }
 }
@@ -100,11 +164,57 @@
     @apply font-sans;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-frame text-foreground antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  /* Tailwind v4 preflight resets buttons to cursor: default; restore the pointer on anything clickable. */
+  a[href],
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='tab']:not([aria-disabled='true']),
+  [role='option']:not([aria-disabled='true']),
+  [role='combobox']:not([data-disabled]),
+  select:not(:disabled),
+  summary,
+  label[for] {
+    cursor: pointer;
+  }
+  /* One easing curve for every transition in the app (DESIGN.md §6). */
+  *,
+  *::before,
+  *::after {
+    transition-timing-function: var(--ease-out-soft);
   }
   /* Tabular figures so dates, counts and IDs line up in columns. */
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+  ::selection {
+    background: oklch(0.9 0.07 60); /* tangerine-tinted selection */
+  }
+}
+
+@layer utilities {
+  /* Staggered entrance: set --i on each child for its position in the sequence. */
+  .stagger {
+    animation-delay: calc(var(--i, 0) * 40ms);
+  }
+  /* Film grain on a fixed, click-through layer: texture without repainting on scroll. */
+  .grain::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 30; /* above content, below the sticky bar (40) and dialogs (50) */
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 }
 

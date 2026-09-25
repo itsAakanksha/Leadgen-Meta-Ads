@@ -59,16 +59,21 @@ export function LeadActions({ lead, reload, onConflict }: LeadActionsProps) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex w-full items-center gap-2 md:w-auto">
       <StatusChanger
         status={lead.status}
         allowedTransitions={lead.allowedTransitions}
         pendingStatus={changeStatus.isPending ? changeStatus.variables.status : null}
         onChange={handleStatus}
       />
-      <Button variant="outline" onClick={() => gate.withActor(() => setEditing(true))}>
+      <Button
+        variant="outline"
+        size="lg"
+        className="h-10 px-4 max-sm:px-3"
+        onClick={() => gate.withActor(() => setEditing(true))}
+      >
         <PencilSimpleIcon aria-hidden />
-        Edit
+        <span className="max-sm:sr-only">Edit</span>
       </Button>
 
       {editing ? (

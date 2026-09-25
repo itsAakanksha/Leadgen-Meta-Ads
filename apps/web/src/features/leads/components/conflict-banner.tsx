@@ -17,8 +17,8 @@ export function ConflictBanner({
   children?: string;
 }) {
   return (
-    <Alert role="alert" className="border-(--status-contacted-fg)/30 bg-(--status-contacted-bg)/50">
-      <WarningIcon aria-hidden weight="fill" className="text-(--status-contacted-fg)" />
+    <Alert role="alert" className="border-warning-fg/30 bg-warning-bg/50">
+      <WarningIcon aria-hidden weight="fill" className="text-warning-fg" />
       <AlertTitle>This lead has changed</AlertTitle>
       <AlertDescription className="grid gap-3">
         <p>{children}</p>

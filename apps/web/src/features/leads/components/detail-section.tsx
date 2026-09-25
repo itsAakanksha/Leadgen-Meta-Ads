@@ -1,45 +1,69 @@
+import type { Icon } from '@phosphor-icons/react';
 import { useId, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-/** A titled group on the lead page. One flat surface; no nested cards. */
+/** A titled group on the lead page. Flat: the surrounding Surface provides the depth. */
 export function DetailSection({
   title,
+  icon: IconComponent,
+  meta,
   action,
   className,
   children,
 }: {
   title: string;
+  icon?: Icon;
+  /** Quiet supporting figure next to the title, such as a count. */
+  meta?: ReactNode;
   action?: ReactNode;
   className?: string;
   children: ReactNode;
 }) {
   const headingId = useId();
   return (
-    <section aria-labelledby={headingId} className={cn('rounded-lg border bg-card', className)}>
-      <header className="flex items-center justify-between gap-2 border-b px-4 py-3">
-        <h2 id={headingId} className="text-sm font-semibold">
-          {title}
-        </h2>
+    <section aria-labelledby={headingId} className={cn('px-4 py-4 sm:px-5', className)}>
+      <header className="mb-2 flex min-h-6 items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {IconComponent ? (
+            <IconComponent aria-hidden className="size-4 text-muted-foreground" />
+          ) : null}
+          <h2 id={headingId} className="text-[13px] font-semibold tracking-tight">
+            {title}
+          </h2>
+          {meta !== undefined ? (
+            <span className="tabular rounded-xs bg-muted px-1.5 text-[11px] leading-4.5 font-medium text-muted-foreground">
+              {meta}
+            </span>
+          ) : null}
+        </div>
         {action}
       </header>
-      <div className="px-4 py-3">{children}</div>
+      {children}
     </section>
   );
 }
 
-/** Label/value rows as a real description list. */
+/** Label/value rows as a real description list, divided by hairlines. */
 export function DetailList({ items }: { items: { label: string; value: ReactNode }[] }) {
   return (
     // Mobile: each label sits tight above its value. Wider: two aligned columns, the same
     // label width in every section.
-    <dl className="grid gap-3 text-sm sm:grid-cols-[10rem_1fr] sm:gap-x-6 sm:gap-y-2.5">
+    <dl className="grid text-sm">
       {items.map(({ label, value }) => (
-        <div key={label} className="grid gap-0.5 sm:contents">
+        <div
+          key={label}
+          className="-mx-2 grid gap-0.5 border-b border-hairline px-2 py-2 transition-colors last:border-b-0 hover:bg-surface-subtle sm:grid-cols-[9.5rem_minmax(0,1fr)] sm:gap-x-6"
+        >
           <dt className="text-muted-foreground">{label}</dt>
           <dd className="min-w-0 break-words">{value}</dd>
         </div>
       ))}
     </dl>
   );
+}
+
+/** "—" for a missing value, quiet enough not to compete with real data. */
+export function Empty({ children = '—' }: { children?: string }) {
+  return <span className="text-muted-foreground">{children}</span>;
 }
