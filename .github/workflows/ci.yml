@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Manual trigger for the real Meta Graph API suite (needs repo secrets).
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -59,6 +61,8 @@ jobs:
 
   test-meta:
     name: Tests against the real Meta Graph API
+    # Manual only: needs live Meta secrets and a non-expired Page token, so it must not gate pushes.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     # Real test leads are created on one Meta form, so runs must not overlap.
     concurrency: meta-graph-api
