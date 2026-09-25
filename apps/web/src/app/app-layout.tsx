@@ -62,12 +62,7 @@ export function AppLayout() {
           to="/"
           className="flex min-h-11 items-center gap-2.5 rounded-xl px-1 text-[15px] font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring lg:px-2"
         >
-          <span
-            aria-hidden
-            className="grid size-8 place-items-center rounded-[10px] bg-primary shadow-primary"
-          >
-            <span className="size-2.5 rounded-sm bg-primary-foreground" />
-          </span>
+          <img src="/logo-192.png" alt="" aria-hidden className="size-8 shrink-0" />
           Lead Intake
         </Link>
 
