@@ -1,45 +1,24 @@
 # One-command local stack:  docker compose up --build
 #   web  http://localhost:5173   (React app; /api/* is proxied to the api container)
 #   api  http://localhost:4000   (Express; runs migrations on start, then the worker)
-#   db   localhost:5433          (Postgres 17, plus a separate test database)
-# Meta credentials come from apps/api/.env (copy apps/api/.env.example).
+# The database is Supabase (DATABASE_URL/DIRECT_URL in apps/api/.env), as are all other
+# settings, including Meta credentials.
+#
+# Integration tests need a disposable Postgres (they TRUNCATE every table):
+#   docker compose --profile test up -d test-db      # localhost:5433/lead_intake_test
 
 services:
-  db:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: lead_intake
-    ports:
-      - '5433:5432' # 5433 on host avoids clashing with a locally installed Postgres
-    volumes:
-      - db-data:/var/lib/postgresql/data
-      # Creates the separate database used by integration tests.
-      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
-      interval: 2s
-      timeout: 3s
-      retries: 20
-
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
     env_file:
       - path: apps/api/.env
-        required: false
+        required: true
     environment:
-      # Inside the compose network the database is `db:5432`, not localhost:5433.
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/lead_intake
-      DIRECT_URL: postgresql://postgres:postgres@db:5432/lead_intake
       NODE_ENV: production
     ports:
       - '4000:4000'
-    depends_on:
-      db:
-        condition: service_healthy
 
   web:
     build:
@@ -53,5 +32,14 @@ services:
       api:
         condition: service_healthy
 
-volumes:
-  db-data:
+  test-db:
+    profiles: [test]
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lead_intake_test
+    ports:
+      - '5433:5432' # 5433 on host avoids clashing with a locally installed Postgres
+    tmpfs:
+      - /var/lib/postgresql/data # throwaway: tests reset the data anyway

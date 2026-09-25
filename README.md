@@ -142,19 +142,18 @@ Errors always use this shape: `{ "error": { "code", "message", "details?" } }`. 
 **Prerequisites:** Node ≥ 22.12, pnpm 10 (`corepack enable`), Docker.
 
 ```bash
-cp apps/api/.env.example apps/api/.env   # fill in the Meta values (see "Meta setup")
-docker compose up --build                # db + api + web
+cp apps/api/.env.example apps/api/.env   # fill in Supabase + Meta values (see "Deployment", "Meta setup")
+docker compose up --build                # api + web
 ```
 
 - Web: http://localhost:5173 (`/api/*` is proxied to the API)
 - API: http://localhost:4000
-- Postgres: `localhost:5433`, host port 5433 so it doesn't clash with a locally installed Postgres. A separate `lead_intake_test` database is created for the tests.
+- Database: Supabase, via `DATABASE_URL` / `DIRECT_URL` in `apps/api/.env`.
 
 To run the apps with hot reload instead of Docker:
 
 ```bash
 pnpm install
-docker compose up -d db
 pnpm --filter @lead-intake/api db:migrate
 pnpm --filter @lead-intake/api dev      # :4000
 pnpm --filter @lead-intake/web dev      # :5173
@@ -219,7 +218,7 @@ pnpm --filter @lead-intake/web test
 pnpm lint && pnpm typecheck && pnpm format:check
 ```
 
-**API tests** use Vitest with Supertest, against a real Postgres database (`lead_intake_test`, migrated automatically, run serially).
+**API tests** use Vitest with Supertest, against a real, disposable Postgres database (`lead_intake_test`, migrated automatically, run serially). Start it with `docker compose --profile test up -d test-db` (host port 5433). The tests truncate every table, so `TEST_DATABASE_URL` must never point at Supabase.
 
 - **Signature:**
   - valid, tampered, wrong secret, missing, no `sha256=` prefix, legacy `sha1=`, truncated

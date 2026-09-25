@@ -2,8 +2,11 @@ node_modules/
 dist/
 coverage/
 .env
+.agents/
 .env.*
 !.env.example
 *.log
 .DS_Store
 apps/api/src/generated/
+requirements.md
+skills-lock.json

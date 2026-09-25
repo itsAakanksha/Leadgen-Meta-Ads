@@ -4,7 +4,7 @@ export function requireTestDatabaseUrl(): string {
   const url = process.env.TEST_DATABASE_URL;
   if (!url) {
     throw new Error(
-      'TEST_DATABASE_URL is not set. Start Postgres with `docker compose up -d db` and copy apps/api/.env.example to apps/api/.env.',
+      'TEST_DATABASE_URL is not set. Start the test database with `docker compose --profile test up -d test-db` and copy apps/api/.env.example to apps/api/.env.',
     );
   }
   return url;
