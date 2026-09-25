@@ -2,7 +2,7 @@
 
 Receives leads from **Meta Lead Ads** webhooks, stores them with an **append-only audit trail**, and gives a sales team a dashboard to review and work them.
 
-- **Live app:** _add Vercel URL after deploying_ · **API:** _add Render URL_
+- **Live app:** https://leadgen-meta-ads-web.vercel.app · **API:** https://leadgen-meta-ads.onrender.com (free plan: the first request after ~15 min idle takes ~30–50 s while it wakes up)
 - **Stack:**
   - API: Node 22 + TypeScript, Express 5, Prisma 7, PostgreSQL (Supabase)
   - Web: React 19 + Vite, TanStack Query, shadcn/ui, Tailwind 4
@@ -275,7 +275,7 @@ Everything runs on free tiers.
 3. **Vercel (web).**
    - Import the repo with **Root Directory `apps/web`**.
    - Set `VITE_PRIVACY_CONTACT_EMAIL`.
-   - If your Render URL differs from `https://lead-intake-api.onrender.com`, update the rewrite in `apps/web/vercel.json`.
+   - If your Render URL differs from `https://leadgen-meta-ads.onrender.com`, update the rewrite in `apps/web/vercel.json`.
 4. **Meta.** Set the webhook callback to `https://<render-host>/webhook/meta-lead`, then `pnpm lead:create` (or the Testing Tool) to see a lead arrive.
 
 **Free-tier behaviour to expect:**
