@@ -16,7 +16,7 @@ const envSchema = z.object({
   // Pinned so a Meta release never changes response shapes under us.
   GRAPH_API_VERSION: z
     .string()
-    .regex(/^vd+.d+$/, 'must look like v25.0')
+    .regex(/^v\d+\.\d+$/, 'must look like v25.0')
     .default('v25.0'),
 });
 
